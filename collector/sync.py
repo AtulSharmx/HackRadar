@@ -1,0 +1,74 @@
+"""Write one run's parsed events to Supabase: match known links, dedupe new ones, merge, upsert."""
+import hashlib
+import json
+import uuid
+from collections import defaultdict
+from datetime import datetime, timezone
+
+from . import dedupe
+from .db import Db
+from .models import Event
+
+
+def _same(a, b) -> bool:
+    if isinstance(a, str) and isinstance(b, str) and "T" in a and "T" in b:
+        try:
+            return datetime.fromisoformat(a) == datetime.fromisoformat(b)
+        except ValueError:
+            pass
+    return a == b
+
+
+def sync(db: Db, events: list[Event]) -> dict[str, int]:
+    """Returns new-event counts per source."""
+    stored = {r["id"]: r for r in db.select_all("events", select="*")}
+    links = db.select_all("event_sources", select="source,source_event_id,event_id")
+    link_of = {(l["source"], l["source_event_id"]): l["event_id"] for l in links}
+    sources_of = defaultdict(set)
+    for l in links:
+        sources_of[l["event_id"]].add(l["source"])
+
+    now = datetime.now(timezone.utc).isoformat()
+    incoming = defaultdict(list)     # event_id -> [row, ...]
+    new_ids, new_count, reviews = set(), defaultdict(int), []
+    source_rows = []
+    pool = [dict(r) for r in stored.values()]   # match candidates, grows as new events are created
+
+    for e in {(e.source, e.source_event_id): e for e in events}.values():
+        row = e.to_row()
+        event_id = link_of.get((e.source, e.source_event_id))
+        if event_id is None:
+            # never merge two records of the same source: each source's own id is authoritative
+            cands = [c for c in pool if e.source not in sources_of[c["id"]]]
+            match, s = dedupe.best_match(row, cands)
+            if match and s >= dedupe.MERGE_AT:
+                event_id = match["id"]
+            else:
+                event_id = str(uuid.uuid4())
+                new_ids.add(event_id)
+                new_count[e.source] += 1
+                pool.append({"id": event_id, **row})
+                if match and s >= dedupe.REVIEW_AT:
+                    reviews.append({"reason": "possible_duplicate", "event_a": event_id,
+                                    "event_b": match["id"], "score": min(s, 32767)})
+            sources_of[event_id].add(e.source)
+        incoming[event_id].append(row)
+        source_rows.append({
+            "source": e.source, "source_event_id": e.source_event_id, "event_id": event_id,
+            "source_url": e.source_url, "missing_runs": 0, "last_seen_at": now,
+            "raw_hash": hashlib.sha256(json.dumps(row, sort_keys=True, default=str).encode()).hexdigest(),
+        })
+
+    event_rows = []
+    for event_id, rows in incoming.items():
+        old = stored.get(event_id)
+        merged = dedupe.merge(rows, old)
+        # only write real changes, so updated_at (what the app syncs on) moves only then
+        if old is None or any(not _same(merged[k], old.get(k)) for k in merged):
+            event_rows.append({"id": event_id, **merged, "last_checked_at": now})
+
+    # ponytail: separate requests, not one transaction; an interrupted run is repaired by the next one
+    db.post("events", event_rows, on_conflict="id")
+    db.post("event_sources", source_rows, on_conflict="source,source_event_id")
+    db.post("review_queue", reviews)
+    return dict(new_count)

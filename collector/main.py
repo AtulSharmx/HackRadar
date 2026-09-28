@@ -1,4 +1,4 @@
-"""One collector run: every adapter fetches, parses, filters, saves, and logs a source_runs row.
+"""One collector run: every adapter fetches + parses (isolated), then everything is deduped and saved together.
 
 Run with:  python -m collector.main
 """
@@ -10,19 +10,22 @@ import traceback
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
+from .sync import sync
 
 
 def valid(e) -> bool:
     return bool(e.title and len(e.title) >= 3 and re.match(r"^https?://", e.registration_url or ""))
 
 
-def run_source(adapter, client, db) -> str:
+def collect(adapter, client) -> tuple[list, dict]:
+    """Fetch + parse one source. Never raises: a broken source must not stop the others."""
     t0 = time.monotonic()
-    found = new = 0
-    error = None
+    stat = {"found": 0, "error": None, "fetched": 0}
+    events = []
     try:
         raws = adapter.fetch(client)
-        events, bad = [], 0
+        stat["fetched"] = len(raws)
+        bad = 0
         for raw in raws:
             try:
                 e = adapter.parse(raw)
@@ -31,24 +34,28 @@ def run_source(adapter, client, db) -> str:
                 continue
             if valid(e) and adapter.is_relevant(e):
                 events.append(e)
-        found = len(events)
-        new = db.save(adapter.name, events)
         if bad:
-            error = f"{bad} of {len(raws)} records failed to parse"
-        summary = f"{adapter.name}: fetched {len(raws)}, kept {found}, new {new}" + (f", {error}" if error else "")
-    except Exception as exc:   # one broken source never stops the others
-        error = f"{type(exc).__name__}: {exc}"[:1000]
+            stat["error"] = f"{bad} of {len(raws)} records failed to parse"
+    except Exception as exc:
         traceback.print_exc()
-        summary = f"{adapter.name}: FAILED - {error}"
-    db.log_run(adapter.name, found, new, int((time.monotonic() - t0) * 1000), error)
-    return summary
+        stat["error"] = f"{type(exc).__name__}: {exc}"[:1000]
+    stat["found"] = len(events)
+    stat["ms"] = int((time.monotonic() - t0) * 1000)
+    return events, stat
 
 
 def main() -> int:
     db, client = Db(), Client()
-    results = [run_source(a, client, db) for a in ADAPTERS]
-    print("\n".join(results))
-    return 1 if all("FAILED" in r for r in results) else 0
+    all_events, stats = [], {}
+    for a in ADAPTERS:
+        events, stats[a.name] = collect(a, client)
+        all_events += events
+    new = sync(db, all_events)
+    for name, s in stats.items():
+        db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
+        print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
+              + (f", ERROR {s['error']}" if s["error"] else ""))
+    return 1 if all(s["found"] == 0 and s["error"] for s in stats.values()) else 0
 
 
 if __name__ == "__main__":
