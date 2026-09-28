@@ -1,0 +1,57 @@
+from datetime import datetime, timezone
+
+from collector.normalize import (clean_city, find_indian_city, map_themes, parse_date, parse_mode,
+                                 parse_money, strip_html)
+
+
+def test_money_indian_formats():
+    assert parse_money("₹1,00,000") == (100000, False)
+    assert parse_money("1 lakh") == (100000, False)
+    assert parse_money("Rs. 2.5 Lakhs") == (250000, False)
+    assert parse_money("INR 1 crore") == (10_000_000, False)
+    assert parse_money("₹ <span data-currency-value>50,000</span>") == (50000, False)
+
+
+def test_money_usd_is_converted_and_approximate():
+    amount, approx = parse_money("$<span data-currency-value>10,000</span>")
+    assert approx is True and amount == 880_000
+
+
+def test_money_missing():
+    assert parse_money(None) == (None, False)
+    assert parse_money("Goodies and swag") == (None, False)
+
+
+def test_mode_words():
+    assert parse_mode("In-Person") == "offline"
+    assert parse_mode("on-site event") == "offline"
+    assert parse_mode("Virtual") == "online"
+    assert parse_mode("Hybrid (online + offline)") == "hybrid"
+    assert parse_mode("") is None
+
+
+def test_city_aliases():
+    assert clean_city("Gurgaon") == "Gurugram"
+    assert clean_city(" bangalore ") == "Bengaluru"
+    assert clean_city("Delhi NCR") == "Delhi"
+    assert clean_city("unnao") == "Unnao"
+    assert clean_city("") is None
+    assert find_indian_city("Tripura Vasini Palace Grounds, Bengaluru") == "Bengaluru"
+    assert find_indian_city("Databricks Singapore") is None
+
+
+def test_deadline_without_time_is_2359_ist():
+    assert parse_date("Oct 23, 2026", deadline=True) == datetime(2026, 10, 23, 18, 29, tzinfo=timezone.utc)
+    assert parse_date("2026-10-04T19:59:00+05:30") == datetime(2026, 10, 4, 14, 29, tzinfo=timezone.utc)
+    assert parse_date("not a date") is None
+
+
+def test_themes():
+    assert map_themes("Machine Learning/AI", "IoT") == ["ai_ml", "iot_hardware"]
+    assert map_themes("Data Structures and Algorithms") == ["other"]
+    assert map_themes("Web3 builders") == ["blockchain"]
+
+
+def test_strip_html_and_cut():
+    assert strip_html("<p>Hi&amp; <b>there</b></p>") == "Hi& there"
+    assert len(strip_html("x" * 500, 300)) == 300

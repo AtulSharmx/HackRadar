@@ -1,0 +1,6 @@
+{
+  "themes": ["ai_ml", "cybersecurity", "web", "mobile", "data_science", "blockchain", "iot_hardware", "open_innovation", "other"],
+  "degrees": ["bca", "btech", "bsc", "mca", "mtech", "other"],
+  "warning_codes": ["high_fee", "no_organizer", "date_conflict", "domain_mismatch", "social_only"],
+  "change_fields": ["registration_deadline", "start_date", "venue_address", "city", "mode", "fee_amount"]
+}
