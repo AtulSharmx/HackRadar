@@ -1,0 +1,12 @@
+#!/bin/sh
+# Block commits that contain secrets. Enabled with: git config core.hooksPath .githooks
+if git diff --cached --name-only | grep -qE '(^|/)\.env$'; then
+  echo "BLOCKED: .env must never be committed." >&2; exit 1
+fi
+pattern='eyJhbGci''OiJIUzI1NiIs|sb_secret_[A-Za-z0-9_-]{10,}|[0-9]{8,10}:AA[A-Za-z0-9_-]{30,}|postgres(ql)?://[^:/ ]+:[^@ ]+@'
+hits=$(git diff --cached -U0 --diff-filter=ACM | grep '^+' | grep -v '^+++' | grep -En "$pattern")
+if [ -n "$hits" ]; then
+  echo "BLOCKED: staged changes look like they contain a key/token/password:" >&2
+  echo "$hits" | cut -c1-80 >&2
+  echo "Move it to .env instead." >&2; exit 1
+fi
