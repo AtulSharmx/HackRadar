@@ -35,6 +35,12 @@ class Db:
         if r.status_code >= 300:
             raise RuntimeError(f"{table} write failed: {r.status_code} {r.text[:300]}")
 
+    def rpc(self, fn: str, **args):
+        r = self.http.post(f"/rpc/{fn}", json=args)
+        if r.status_code >= 300:
+            raise RuntimeError(f"rpc {fn} failed: {r.status_code} {r.text[:300]}")
+        return r.json()
+
     def log_run(self, source: str, found: int, new: int, duration_ms: int, error: str | None):
         self.post("source_runs", [{"source": source, "events_found": found, "new_events": new,
                                    "duration_ms": duration_ms, "error_text": error}])
