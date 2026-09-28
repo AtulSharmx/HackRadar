@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import health
+from . import geocode, health
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -62,6 +62,10 @@ def main() -> int:
     ok = [name for name, s in stats.items() if s["ok"]]
     end = db.rpc("end_of_run", ok_sources=ok, run_started=run_started)[0]
     print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}")
+    try:   # geocoding is best effort: Nominatim being down must not fail the run
+        print(f"geocode: {geocode.run(db)}")
+    except Exception:
+        traceback.print_exc()
     try:   # a broken health check must not fail an otherwise good run
         print(f"health alerts sent: {health.check_and_alert(db, [a.name for a in ADAPTERS])}")
     except Exception:

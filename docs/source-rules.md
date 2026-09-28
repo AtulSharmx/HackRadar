@@ -20,3 +20,11 @@
 - Hamesha ek pehchaan wala User-Agent bhejo, jisme contact ho.
 - 1 request/second se tez nahi. Error aaye to backoff karke ruk jao.
 - Sirf event ki public info rakho (naam, dates, prize, mode, venue, link). Kisi user ka data nahi.
+
+## OpenStreetMap Nominatim (venue geocoding, added 2026-09-29)
+- robots.txt disallows `/search` for crawlers. We are not crawling: this is API use, which the
+  Nominatim Usage Policy allows for apps that stay within its rules.
+- Rules we follow: max 1 request/second (1.1 s gap), identifying User-Agent, every result cached in
+  `geocode_cache`, max 50 new addresses per run, approximate results retried only weekly.
+- Must show "© OpenStreetMap contributors" in the app (About screen). Data is ODbL.
+- shared/cities.json coordinates also come from Nominatim (built by `python -m collector.build_cities`).

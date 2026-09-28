@@ -1,11 +1,13 @@
 """Turn messy source text into clean values: dates, money, mode, city, themes, text."""
 import html
+import json
 import re
 from datetime import datetime, timedelta, timezone
 
 from dateutil import parser as dateparser
 
 from . import config
+from .config import ROOT
 
 IST = timezone(timedelta(hours=5, minutes=30))  # India has no DST
 
@@ -61,30 +63,12 @@ def parse_mode(text) -> str | None:
 
 # ---------- city ----------
 
-CITY_ALIASES = {
-    "bangalore": "Bengaluru", "bengaluru": "Bengaluru",
-    "gurgaon": "Gurugram", "gurugram": "Gurugram",
-    "bombay": "Mumbai", "mumbai": "Mumbai", "navi mumbai": "Navi Mumbai",
-    "delhi ncr": "Delhi", "new delhi": "Delhi", "delhi": "Delhi",
-    "madras": "Chennai", "chennai": "Chennai",
-    "calcutta": "Kolkata", "kolkata": "Kolkata",
-    "poona": "Pune", "pune": "Pune",
-    "noida": "Noida", "greater noida": "Greater Noida", "ghaziabad": "Ghaziabad", "faridabad": "Faridabad",
-    "hyderabad": "Hyderabad", "secunderabad": "Hyderabad",
-    "ahmedabad": "Ahmedabad", "gandhinagar": "Gandhinagar", "surat": "Surat", "vadodara": "Vadodara",
-    "jaipur": "Jaipur", "lucknow": "Lucknow", "kanpur": "Kanpur", "indore": "Indore", "bhopal": "Bhopal",
-    "gwalior": "Gwalior", "nagpur": "Nagpur", "nashik": "Nashik", "chandigarh": "Chandigarh", "mohali": "Mohali",
-    "dehradun": "Dehradun", "coimbatore": "Coimbatore", "kochi": "Kochi", "cochin": "Kochi",
-    "trivandrum": "Thiruvananthapuram", "thiruvananthapuram": "Thiruvananthapuram",
-    "vizag": "Visakhapatnam", "visakhapatnam": "Visakhapatnam", "vijayawada": "Vijayawada",
-    "bhubaneswar": "Bhubaneswar", "patna": "Patna", "ranchi": "Ranchi", "guwahati": "Guwahati",
-    "srinagar": "Srinagar", "jammu": "Jammu", "amritsar": "Amritsar", "ludhiana": "Ludhiana",
-    "varanasi": "Varanasi", "prayagraj": "Prayagraj", "allahabad": "Prayagraj",
-    "mysore": "Mysuru", "mysuru": "Mysuru", "mangalore": "Mangaluru", "mangaluru": "Mangaluru",
-    "manipal": "Manipal", "vellore": "Vellore", "madurai": "Madurai", "raipur": "Raipur",
-    "goa": "Goa", "panaji": "Goa",
-}
-_CITY_RE = re.compile(r"\b(" + "|".join(sorted(map(re.escape, CITY_ALIASES), key=len, reverse=True)) + r")\b", re.I)
+CITIES = json.loads((ROOT / "shared/cities.json").read_text(encoding="utf-8"))["cities"]
+CITY_ALIASES = {n.lower(): c["name"] for c in CITIES for n in [c["name"], *c["aliases"]]}
+# names that also exist abroad ("Salem, Oregon") or as common words: never used alone as proof of India
+_AMBIGUOUS = {"salem", "mandi", "gaya", "kota", "goa"}
+_CITY_RE = re.compile(r"\b(" + "|".join(sorted((re.escape(k) for k in CITY_ALIASES if k not in _AMBIGUOUS),
+                                                 key=len, reverse=True)) + r")\b", re.I)
 _INDIA_HINTS = re.compile(r"\b(india|iit|nit|iiit|bits pilani)\b", re.I)
 
 
@@ -92,7 +76,9 @@ def clean_city(name) -> str | None:
     s = re.sub(r"\s+", " ", name or "").strip(" ,.")
     if not s:
         return None
-    return CITY_ALIASES.get(s.lower(), s.title())
+    key = s.lower()
+    # "Bangalore Urban", "Pune District" -> the city itself
+    return CITY_ALIASES.get(key) or CITY_ALIASES.get(re.sub(r"\s+(urban|rural|district|city)$", "", key)) or s.title()
 
 
 def find_indian_city(text) -> str | None:
