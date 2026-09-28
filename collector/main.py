@@ -6,6 +6,7 @@ import re
 import sys
 import time
 import traceback
+from datetime import datetime, timezone
 
 from .adapters import ADAPTERS
 from .db import Db
@@ -20,7 +21,7 @@ def valid(e) -> bool:
 def collect(adapter, client) -> tuple[list, dict]:
     """Fetch + parse one source. Never raises: a broken source must not stop the others."""
     t0 = time.monotonic()
-    stat = {"found": 0, "error": None, "fetched": 0}
+    stat = {"found": 0, "error": None, "fetched": 0, "ok": False}
     events = []
     try:
         raws = adapter.fetch(client)
@@ -36,6 +37,7 @@ def collect(adapter, client) -> tuple[list, dict]:
                 events.append(e)
         if bad:
             stat["error"] = f"{bad} of {len(raws)} records failed to parse"
+        stat["ok"] = len(raws) > 0   # fetched fine; parse errors on a few records don't count as down
     except Exception as exc:
         traceback.print_exc()
         stat["error"] = f"{type(exc).__name__}: {exc}"[:1000]
@@ -45,6 +47,7 @@ def collect(adapter, client) -> tuple[list, dict]:
 
 
 def main() -> int:
+    run_started = datetime.now(timezone.utc).isoformat()
     db, client = Db(), Client()
     all_events, stats = [], {}
     for a in ADAPTERS:
@@ -55,7 +58,9 @@ def main() -> int:
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
               + (f", ERROR {s['error']}" if s["error"] else ""))
-    print(f"changes recorded: {n_changes}")
+    ok = [name for name, s in stats.items() if s["ok"]]
+    end = db.rpc("end_of_run", ok_sources=ok, run_started=run_started)[0]
+    print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}")
     return 1 if all(s["found"] == 0 and s["error"] for s in stats.values()) else 0
 
 

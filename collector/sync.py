@@ -54,6 +54,11 @@ def sync(db: Db, events: list[Event]) -> tuple[dict[str, int], int]:
     for event_id, rows in incoming.items():
         old = stored.get(event_id)
         merged = dedupe.merge(rows, old)
+        # seen on a source this run and passed is_relevant (still open): reopen if it was closed/stale
+        merged["status"] = "open"
+        # every row in one upsert must carry the same keys, so trust_label is always set
+        label = (old or {}).get("trust_label")
+        merged["trust_label"] = label if label and label != "stale" else "check_details"
         merged["fingerprint"] = changes.fingerprint(merged)
         # old fingerprint missing = first run with change tracking: set it, don't report a change
         if old and old.get("fingerprint") and old["fingerprint"] != merged["fingerprint"]:
