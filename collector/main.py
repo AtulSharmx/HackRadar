@@ -50,11 +50,12 @@ def main() -> int:
     for a in ADAPTERS:
         events, stats[a.name] = collect(a, client)
         all_events += events
-    new = sync(db, all_events)
+    new, n_changes = sync(db, all_events)
     for name, s in stats.items():
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
               + (f", ERROR {s['error']}" if s["error"] else ""))
+    print(f"changes recorded: {n_changes}")
     return 1 if all(s["found"] == 0 and s["error"] for s in stats.values()) else 0
 
 

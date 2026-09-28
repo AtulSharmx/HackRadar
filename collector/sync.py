@@ -5,22 +5,13 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from . import dedupe
+from . import changes, dedupe
 from .db import Db
 from .models import Event
 
 
-def _same(a, b) -> bool:
-    if isinstance(a, str) and isinstance(b, str) and "T" in a and "T" in b:
-        try:
-            return datetime.fromisoformat(a) == datetime.fromisoformat(b)
-        except ValueError:
-            pass
-    return a == b
-
-
-def sync(db: Db, events: list[Event]) -> dict[str, int]:
-    """Returns new-event counts per source."""
+def sync(db: Db, events: list[Event]) -> tuple[dict[str, int], int]:
+    """Returns (new-event counts per source, number of tracked changes recorded)."""
     stored = {r["id"]: r for r in db.select_all("events", select="*")}
     links = db.select_all("event_sources", select="source,source_event_id,event_id")
     link_of = {(l["source"], l["source_event_id"]): l["event_id"] for l in links}
@@ -59,16 +50,23 @@ def sync(db: Db, events: list[Event]) -> dict[str, int]:
             "raw_hash": hashlib.sha256(json.dumps(row, sort_keys=True, default=str).encode()).hexdigest(),
         })
 
-    event_rows = []
+    event_rows, change_rows = [], []
     for event_id, rows in incoming.items():
         old = stored.get(event_id)
         merged = dedupe.merge(rows, old)
+        merged["fingerprint"] = changes.fingerprint(merged)
+        # old fingerprint missing = first run with change tracking: set it, don't report a change
+        if old and old.get("fingerprint") and old["fingerprint"] != merged["fingerprint"]:
+            change = changes.diff(old, merged)
+            if change:
+                change_rows.append({"event_id": event_id, **change})
         # only write real changes, so updated_at (what the app syncs on) moves only then
-        if old is None or any(not _same(merged[k], old.get(k)) for k in merged):
+        if old is None or any(not changes.same(merged[k], old.get(k)) for k in merged):
             event_rows.append({"id": event_id, **merged, "last_checked_at": now})
 
     # ponytail: separate requests, not one transaction; an interrupted run is repaired by the next one
     db.post("events", event_rows, on_conflict="id")
     db.post("event_sources", source_rows, on_conflict="source,source_event_id")
     db.post("review_queue", reviews)
-    return dict(new_count)
+    db.post("event_changes", change_rows)
+    return dict(new_count), len(change_rows)
