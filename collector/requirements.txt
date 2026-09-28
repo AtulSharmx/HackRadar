@@ -1,0 +1,5 @@
+httpx==0.28.*
+python-dateutil==2.9.*
+rapidfuzz==3.*
+python-dotenv==1.*
+pytest==8.*
