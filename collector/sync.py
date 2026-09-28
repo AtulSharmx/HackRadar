@@ -78,4 +78,9 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
     db.post("event_sources", source_rows, on_conflict="source,source_event_id")
     db.post("review_queue", reviews)
     db.post("event_changes", change_rows)
+    moved = [c["event_id"] for c in change_rows if {"venue_address", "city"} & set(c["changed_fields"])]
+    if moved:   # venue changed: old coordinates are wrong now, geocode again
+        r = db.http.patch("/events", params={"id": f"in.({','.join(moved)})"},
+                          json={"lat": None, "lng": None, "location_approximate": False})
+        r.raise_for_status()
     return dict(new_count), len(change_rows)
