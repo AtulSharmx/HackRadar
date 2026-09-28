@@ -8,6 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
+from . import health
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -53,7 +54,7 @@ def main() -> int:
     for a in ADAPTERS:
         events, stats[a.name] = collect(a, client)
         all_events += events
-    new, n_changes = sync(db, all_events)
+    new, n_changes = sync(db, all_events, down={n for n, s in stats.items() if not s['ok']})
     for name, s in stats.items():
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
@@ -61,6 +62,10 @@ def main() -> int:
     ok = [name for name, s in stats.items() if s["ok"]]
     end = db.rpc("end_of_run", ok_sources=ok, run_started=run_started)[0]
     print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}")
+    try:   # a broken health check must not fail an otherwise good run
+        print(f"health alerts sent: {health.check_and_alert(db, [a.name for a in ADAPTERS])}")
+    except Exception:
+        traceback.print_exc()
     return 1 if all(s["found"] == 0 and s["error"] for s in stats.values()) else 0
 
 
