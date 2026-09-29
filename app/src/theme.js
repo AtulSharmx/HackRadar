@@ -20,6 +20,7 @@ const palette = {
     inverseSurface: '#111418', // toast
     inverseText: '#F7F8FA',
     inverseBrand: '#3DD6B0', // toast action: the dark-mode brand reads on the dark toast
+    scrim: 'rgba(0,0,0,0.45)', // behind bottom sheets
   },
   dark: {
     background: '#0D1117',
@@ -38,6 +39,7 @@ const palette = {
     inverseSurface: '#E6EDF3',
     inverseText: '#0D1117',
     inverseBrand: '#0E7C66',
+    scrim: 'rgba(0,0,0,0.6)',
   },
 };
 
