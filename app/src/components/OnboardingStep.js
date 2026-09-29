@@ -1,4 +1,6 @@
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { router } from 'expo-router';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layout, space, type, useAppTheme } from '../theme';
@@ -12,17 +14,25 @@ export default function OnboardingStep({ step, title, subtitle, children, next, 
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { backgroundColor: colors.background }]}>
-      <View
-        style={[styles.dots, { paddingTop: insets.top + space.lg }]}
-        accessible
-        accessibilityLabel={`Step ${step} of ${TOTAL}`}
-      >
-        {Array.from({ length: TOTAL }, (_, i) => (
-          <View
-            key={i}
-            style={[styles.dot, { backgroundColor: i < step ? colors.brand : colors.border }, i === step - 1 && styles.dotNow]}
-          />
-        ))}
+      <View style={[styles.top, { paddingTop: insets.top + space.xs }]}>
+        {/* steps 2-5 can go back; Android's back button does the same */}
+        {step > 1 ? (
+          <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button" accessibilityLabel="Back">
+            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+          </Pressable>
+        ) : (
+          <View style={styles.back} />
+        )}
+        <View style={styles.dots} accessible accessibilityLabel={`Step ${step} of ${TOTAL}`}>
+          {Array.from({ length: TOTAL }, (_, i) => (
+            <View
+              key={i}
+              style={[styles.dot, { backgroundColor: i < step ? colors.brand : colors.border }, i === step - 1 && styles.dotNow]}
+            />
+          ))}
+        </View>
+        {/* same width as the back button so the dots stay centred */}
+        <View style={styles.back} />
       </View>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={[type.screenTitle, styles.title, { color: colors.textPrimary }]} accessibilityRole="header">
@@ -52,7 +62,9 @@ export function Group({ label, children }) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: space.sm, paddingBottom: space.md },
+  top: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.xs },
+  back: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
+  dots: { flex: 1, flexDirection: 'row', justifyContent: 'center', gap: space.sm },
   dot: { width: 8, height: 8, borderRadius: 4 },
   dotNow: { width: 20 },
   content: { paddingHorizontal: layout.screenPadding, paddingTop: space.xl, paddingBottom: space.xl, gap: space.sm },
