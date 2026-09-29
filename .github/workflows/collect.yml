@@ -1,8 +1,10 @@
 name: collect
 
 on:
-  schedule:
-    - cron: "23 */6 * * *"   # every 6 h at :23 UTC (top of the hour is GitHub's busiest slot)
+  # Schedule paused 29 Sep 2026: Devpost and Unstop block GitHub's data-centre IPs (captcha / 403).
+  # The collector is moving to another cloud; manual runs stay available for testing.
+  # schedule:
+  #   - cron: "23 */6 * * *"
   workflow_dispatch:          # "Run workflow" button, also from the GitHub mobile app
 
 concurrency:
