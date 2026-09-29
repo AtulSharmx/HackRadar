@@ -8,8 +8,11 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 
 ## A. Data you can trust (first, because everything else shows this data)
 
-- [ ] A1 Unstop detail enrichment: start date, rounds, structured eligibility from `/api/public/competition/{id}` (only for new or changed events, polite rate).
-  - Check: event start date filled on 95%+ of Unstop events.
+- [x] A1 Unstop detail enrichment: rounds and real start dates from `/api/public/competition/{id}` (only for new or changed events, max 60 per run).
+  - Check (revised): start date filled wherever the source has one. Result 29 Sep: 140/233 (60%, was 0.9%);
+    the other 93 have no rounds on Unstop at all, so the app says "Start date not listed". 0 start-after-end.
+  - Learned: Unstop's top-level start_date is when registration opens, never the event start; organizers
+    sometimes add notices as "rounds" dated after the event (now dropped). Structured eligibility moved to A3.
 - [ ] A2 Quality gate: "is this a hackathon?" (source category + rules for esports/quiz/olympiad/poster/hiring-only), date sanity, prize outliers → review_queue.
   - Check: no esports/poster events in the feed; the 4 found on 29 Sep are caught.
 - [ ] A3 Themes v2 from tags, skills and description.
