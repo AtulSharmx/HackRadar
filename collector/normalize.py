@@ -110,6 +110,39 @@ def map_themes(*texts) -> list[str]:
     found = [k for k, rx in _THEME_RES.items() if rx.search(blob)]
     return found or ["other"]
 
+
+# Themes v2 (Plan A3), tuned on 212 open Unstop events on 30 Sep 2026 where 41% were "other".
+_CONTEST = re.compile(r"\b(coding contest|programming (contest|league)|competitive programming|code ?clash|cp contest|coding league|"
+                      r"battle of codes|code yudh|dsa|codesprint|coderumble|code ?rush|algo\w*)\b", re.I)
+_CONTEST_SKILLS = re.compile(r"\b(data structures|algorithms|competitive programming)\b", re.I)
+# description text is noisy ("AI-powered future" everywhere), so only unambiguous phrases count there
+_DESC_WORDS = {
+    "ai_ml": r"artificial intelligence|machine learning|deep learning|generative ai|large language models?|llms?|computer vision",
+    "cybersecurity": r"cyber ?security|capture the flag|ethical hacking|penetration testing",
+    "web": r"web development|full[ -]?stack|web app(lication)?s?",
+    "mobile": r"mobile app(lication)?s?|android app|flutter",
+    "data_science": r"data science|data analytics|big data",
+    "blockchain": r"blockchain|web3|smart contracts?",
+    "iot_hardware": r"internet of things|\biot\b|embedded systems|hardware prototype",
+}
+_DESC_RES = {k: re.compile(rf"\b({v})\b", re.I) for k, v in _DESC_WORDS.items()}
+_GENERAL_EVENT = re.compile(r"hack|thon\b|challenge|innovat|idea|build", re.I)
+
+
+def classify_themes(title: str, tags: list[str], description: str | None = None) -> list[str]:
+    """Themes from title + source tags, then contest signals, then strong description phrases.
+    A hackathon with no specific theme is open innovation; "other" only when nothing fits."""
+    found = [t for t in map_themes(title, *tags) if t != "other"]
+    # skills alone mark a contest only when the title doesn't say hackathon ("HackForge" lists DSA but isn't a contest)
+    skill_contest = not found and not _GENERAL_EVENT.search(title or "") and any(_CONTEST_SKILLS.search(t or "") for t in tags)
+    if _CONTEST.search(title or "") or skill_contest:
+        found.append("coding_contest")
+    if not found and description:
+        found = [k for k, rx in _DESC_RES.items() if rx.search(description)]
+    if not found and _GENERAL_EVENT.search(title or ""):
+        found = ["open_innovation"]
+    return found or ["other"]
+
 # ---------- text ----------
 
 def strip_html(text, limit: int | None = None) -> str | None:

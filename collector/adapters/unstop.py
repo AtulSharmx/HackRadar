@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from .. import config
 from ..models import Event
-from ..normalize import clean_city, map_themes, parse_date, strip_html
+from ..normalize import classify_themes, clean_city, parse_date, strip_html
 
 name = "unstop"
 URL = "https://unstop.com/api/public/opportunity/search-result"
@@ -61,7 +61,8 @@ def parse(raw: dict) -> Event:
         is_open=raw.get("regn_open") == 1,
         registration_deadline=parse_date(regn.get("end_regn_dt"), deadline=True),
         end_date=parse_date(raw.get("end_date")),
-        themes=map_themes(*skills, *(w.get("name") for w in raw.get("workfunction") or []), raw["title"]),
+        themes=classify_themes(raw["title"], [*skills, *(w.get("name") for w in raw.get("workfunction") or [])],
+                               strip_html(raw.get("details"))),
         team_min=tmin,
         team_max=tmax if tmax and tmin and tmax >= tmin else None,
         solo_allowed=(tmin == 1) if tmin else None,
