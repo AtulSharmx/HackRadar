@@ -1,6 +1,6 @@
 """Telegram alerts for the Telegram-only phase (Stage 4): new matching events + changes to saved events.
 
-Goes to devices with alerts on and no Expo push token. Once the app registers a push token for a
+Goes to devices with alerts on, no Expo push token and prefs.telegram = true (my own row). Once the app registers a push token for a
 device, that device gets push instead (step 34) and these Telegram match alerts stop (step 37).
 Every line is built from the stored event, never from fixed placeholder text.
 """
@@ -62,7 +62,10 @@ def _send_chunked(header: str, blocks: list[str]):
 
 
 def telegram_devices(db) -> list[dict]:
-    return db.select_all("devices", select="*", alerts_enabled="is.true", expo_push_token="is.null")
+    """Only devices explicitly marked for Telegram. App installs create their own device rows
+    (no push token yet, empty prefs); without this marker they would get every new event."""
+    return db.select_all("devices", select="*", alerts_enabled="is.true", expo_push_token="is.null",
+                         **{"prefs->>telegram": "eq.true"})
 
 
 def new_matches(db, new_ids: list[str], now: datetime | None = None) -> int:

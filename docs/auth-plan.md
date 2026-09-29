@@ -28,7 +28,7 @@ Built in Stage 5 (step 24 onward), UI made with the ui-ux-pro-max skill.
 - **Custom SMTP** for email codes (Resend or Brevo free tier). Supabase's built-in email sender is rate-limited to a few emails per hour and is meant only for testing.
 - **Delete account** in Settings (step 31): deletes the auth user, and every linked row goes with it through the cascades. Play Store requires this for apps with accounts.
 
-## Schema change needed at step 24
+## Schema change needed at step 34 (push), not step 24
 
 Today `devices.id = auth user id`, so one user = one device. With login, one person can have several phones. The change:
 
@@ -36,7 +36,7 @@ Today `devices.id = auth user id`, so one user = one device. With login, one per
 - new `push_tokens(user_id, expo_push_token unique, platform, updated_at)`: one row per phone.
 - `saved_events` keyed by user_id.
 
-It goes in as a new migration file with the same RLS rule (own rows only), and the RLS check script gets extended to cover it.
+Step 24 needed no change: devices.id is already the user id, so saves and prefs follow the user once login links an identity. Only push tokens need one row per phone, so this goes in with push (step 34), as a new migration file with the same RLS rule (own rows only), and the RLS check script gets extended to cover it.
 
 ## Sources
 - Supabase anonymous sign-ins and converting to a permanent user: https://supabase.com/docs/guides/auth/auth-anonymous
