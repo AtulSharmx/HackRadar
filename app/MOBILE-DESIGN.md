@@ -38,3 +38,4 @@ max taps to any core screen: 2
 - System font (Roboto). Brief-listed muted color changed for contrast (see theme.js comments).
 - No gradients, illustrations, emoji, stock images, exclamation marks (except the one welcome line).
 - Deviations from the mobile-taste skill, on purpose: Settings is a tab (App Flow doc decides).
+- Deviation from the brief, user's choice (29 Sep): tab header titles are centered ("HackRadar" on Feed), not left.
