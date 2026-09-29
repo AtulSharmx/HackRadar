@@ -17,6 +17,9 @@ const palette = {
     soon: '#9A5B00', // deadline 3-7 days, check details. Never decoration.
     muted: '#697280', // stale, closed. Brief had #8A929C (2.96:1); darkened to pass 4.5:1
     urgentSoft: '#FBEAEA', // warning box fill
+    inverseSurface: '#111418', // toast
+    inverseText: '#F7F8FA',
+    inverseBrand: '#3DD6B0', // toast action: the dark-mode brand reads on the dark toast
   },
   dark: {
     background: '#0D1117',
@@ -32,6 +35,9 @@ const palette = {
     soon: '#F2B84B',
     muted: '#7D8793', // brief had #6B7480 (4.0:1); lightened to pass 4.5:1
     urgentSoft: '#2A1618',
+    inverseSurface: '#E6EDF3',
+    inverseText: '#0D1117',
+    inverseBrand: '#0E7C66',
   },
 };
 
