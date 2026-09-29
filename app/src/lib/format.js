@@ -100,3 +100,37 @@ export function ago(iso, now = new Date()) {
   const d = Math.floor(h / 24);
   return d === 1 ? '1 day ago' : `${d} days ago`;
 }
+
+// "Wed, 30 Sep, 11:59 pm"
+export function dateTime(date) {
+  return `${dateShort(date)}, ${timeShort(date)}`;
+}
+
+// "Sat, 10 Oct to Sun, 11 Oct", one date when both are the same day, null when unknown
+export function dateRange(start, end) {
+  if (!start && !end) return null;
+  if (!start || !end) return dateShort(start || end);
+  const a = dateShort(start);
+  const b = dateShort(end);
+  return a === b ? a : `${a} to ${b}`;
+}
+
+// "Solo", "2 to 4 members", "Solo or up to 4", "Up to 4 members", null when the source says nothing
+export function teamSize(min, max) {
+  if (!min && !max) return null;
+  if (min === 1 && max === 1) return 'Solo';
+  if (min === 1 && max) return `Solo or up to ${max}`;
+  if (min && max) return min === max ? `${min} members` : `${min} to ${max} members`;
+  return max ? `Up to ${max} members` : `At least ${min} members`;
+}
+
+// Only http(s) links may open (App Flow, edge case 13)
+export function safeUrl(url) {
+  return typeof url === 'string' && /^https?:\/\/[^\s/]+/i.test(url);
+}
+
+// "https://www.unstop.com/x" -> "unstop.com"
+export function hostOf(url) {
+  const m = /^https?:\/\/([^/?#:]+)/i.exec(url || '');
+  return m ? m[1].toLowerCase().replace(/^www\./, '') : null;
+}
