@@ -1,10 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import OnboardingStep from '../../components/OnboardingStep';
 import { useDraft } from '../../lib/draft';
+import { askNotificationPermission } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
 import { space, type, useAppTheme } from '../../theme';
 
@@ -26,16 +26,7 @@ export default function NotificationsStep() {
     router.replace('/');
   };
 
-  const allow = async () => {
-    let granted = false;
-    try {
-      const res = await Notifications.requestPermissionsAsync();
-      granted = res.granted;
-    } catch {
-      granted = false; // never block finishing onboarding on this
-    }
-    finish(granted);
-  };
+  const allow = async () => finish(await askNotificationPermission());
 
   return (
     <OnboardingStep
