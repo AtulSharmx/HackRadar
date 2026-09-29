@@ -21,8 +21,12 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     on NASA Space Apps) are useless for this, so only explicit title rules exclude; the default is keep.
     Date problems become warnings, never silent rewrites. Coding contests stay for now (can't tell from titles).
     Prize outliers dropped: no real case found.
-- [ ] A3 Themes v2 from tags, skills and description.
-  - Check: "other" under 15%.
+- [x] A3 Themes v2 from tags, skills and description (normalize.classify_themes).
+  - Check: "other" under 15%. Result 30 Sep: 41% → 7% (14 of 205; games and one-offs that fit no theme).
+  - New theme "Coding contests", so contests stay but people choose them (onboarding + filters), which settles
+    A2's open question. Open-theme hackathons are "Open innovation" instead of "other". Description text counts
+    only with unambiguous phrases ("machine learning", not "AI-powered"). Structured eligibility: not started;
+    Unstop only gives category names ("Engineering Students"), which eligibility_text already shows.
 - [ ] A4 Devfolio adapter (fetch_url POST variant, fixture, tests).
   - Check: 25+ Devfolio events live; duplicates with Unstop merged.
 - [ ] A5 Terms check, then Hack2Skill and Devnovate adapters.

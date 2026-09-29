@@ -109,7 +109,7 @@ def score(event: dict, device: dict, now: datetime | None = None) -> tuple[int, 
 
 THEME_NAMES = {"ai_ml": "AI/ML", "cybersecurity": "Cybersecurity", "web": "Web", "mobile": "Mobile",
                "data_science": "Data science", "blockchain": "Blockchain", "iot_hardware": "IoT/Hardware",
-               "open_innovation": "Open innovation", "other": "Other"}
+               "open_innovation": "Open innovation", "coding_contest": "Coding contests", "other": "Other"}
 
 
 def reasons(event: dict, device: dict, parts: dict, now: datetime | None = None) -> list[str]:

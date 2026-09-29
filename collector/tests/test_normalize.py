@@ -55,3 +55,18 @@ def test_themes():
 def test_strip_html_and_cut():
     assert strip_html("<p>Hi&amp; <b>there</b></p>") == "Hi& there"
     assert len(strip_html("x" * 500, 300)) == 300
+
+
+def test_themes_v2_on_real_titles():
+    from collector.normalize import classify_themes
+    generic = ["Problem Solving", "Teamwork and Collaboration", "Software Development"]
+    assert classify_themes("Winter Coding Contest 6.0", generic) == ["coding_contest"]
+    assert classify_themes("Competitive Programming Hackathon", generic) == ["coding_contest"]
+    assert classify_themes("HackForge 2026", ["Data Structures and Algorithms", "C++ Programming Language"]) == ["open_innovation"]
+    assert classify_themes("CP Contest", ["Data Structures and Algorithms"]) == ["coding_contest"]
+    assert classify_themes("Build and Break Hackathon", generic) == ["open_innovation"]
+    assert classify_themes("Idea Competition 2026", generic) == ["open_innovation"]
+    assert classify_themes("Respawn", ["Game Development"]) == ["other"]   # nothing fits: stays honest
+    # description counts only with an unambiguous phrase
+    assert classify_themes("Zero Hour", generic, "Build solutions using machine learning models") == ["ai_ml"]
+    assert classify_themes("Zero Hour", generic, "An AI-powered future awaits you") == ["other"]
