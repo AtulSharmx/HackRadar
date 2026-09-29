@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { FlashList } from '@shopify/flash-list';
-import { useNavigation } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { useLayoutEffect } from 'react';
 import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -74,7 +74,7 @@ export default function FeedScreen() {
       <FlashList
         data={events}
         keyExtractor={(e) => e.id}
-        renderItem={({ item }) => <EventCard event={item} />}
+        renderItem={({ item }) => <EventCard event={item} onPress={() => router.push(`/event/${item.id}`)} />}
         ItemSeparatorComponent={Separator}
         contentContainerStyle={{ ...styles.list, paddingBottom: insets.bottom + space.xxl }}
         refreshControl={

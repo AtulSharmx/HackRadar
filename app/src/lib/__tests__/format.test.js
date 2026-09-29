@@ -67,3 +67,20 @@ test('ago', () => {
   expect(ago('2026-09-28T17:00:00Z', NOW)).toBe('1 day ago');
   expect(ago('2026-09-26T17:00:00Z', NOW)).toBe('3 days ago');
 });
+
+test('detail helpers', () => {
+  const { dateTime, dateRange, teamSize, safeUrl, hostOf } = require('../format');
+  expect(dateTime('2026-09-30T18:29:00Z')).toBe('Wed, 30 Sep, 11:59 pm');
+  expect(dateRange('2026-10-09T18:30:00Z', '2026-10-10T18:30:00Z')).toBe('Sat, 10 Oct to Sun, 11 Oct');
+  expect(dateRange(null, '2026-10-10T18:30:00Z')).toBe('Sun, 11 Oct');
+  expect(dateRange(null, null)).toBeNull();
+  expect(teamSize(1, 1)).toBe('Solo');
+  expect(teamSize(2, 4)).toBe('2 to 4 members');
+  expect(teamSize(1, 4)).toBe('Solo or up to 4');
+  expect(teamSize(null, null)).toBeNull();
+  expect(safeUrl('https://unstop.com/x')).toBe(true);
+  expect(safeUrl('javascript:alert(1)')).toBe(false);
+  expect(safeUrl('intent://x')).toBe(false);
+  expect(hostOf('https://www.Unstop.com/hackathons/x?y=1')).toBe('unstop.com');
+  expect(hostOf('https://hack-x.devpost.com/')).toBe('hack-x.devpost.com');
+});

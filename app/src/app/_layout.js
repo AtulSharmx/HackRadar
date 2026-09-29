@@ -5,9 +5,6 @@ import { ToastProvider } from '../components/Toast';
 import { SessionProvider } from '../lib/session';
 import { useAppTheme } from '../theme';
 
-// Temporary boot marker (dev only): proves our JS started on the phone. Remove after step 25 is verified.
-if (__DEV__) console.log('[boot] app code started');
-
 // Navigation chrome takes our tokens too, so dark mode never flashes white between screens.
 export default function RootLayout() {
   const { scheme, colors } = useAppTheme();
@@ -31,6 +28,15 @@ export default function RootLayout() {
           <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
           <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="event/[id]"
+              options={{
+                title: '',
+                headerStyle: { backgroundColor: colors.background },
+                headerShadowVisible: false,
+                headerTintColor: colors.textPrimary,
+              }}
+            />
           </Stack>
         </ToastProvider>
       </SessionProvider>
