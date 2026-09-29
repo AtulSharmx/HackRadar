@@ -5,7 +5,7 @@ import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
 
-from . import changes, dedupe
+from . import changes, dedupe, trust
 from .db import Db
 from .models import Event
 
@@ -22,7 +22,7 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
         sources_of[l["event_id"]].add(l["source"])
 
     now = datetime.now(timezone.utc).isoformat()
-    incoming = defaultdict(list)     # event_id -> [row, ...]
+    incoming = defaultdict(dict)     # event_id -> {source: row}
     new_ids, new_count, reviews = set(), defaultdict(int), []
     source_rows = []
     pool = [dict(r) for r in stored.values()]   # match candidates, grows as new events are created
@@ -45,7 +45,7 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
                     reviews.append({"reason": "possible_duplicate", "event_a": event_id,
                                     "event_b": match["id"], "score": min(s, 32767)})
             sources_of[event_id].add(e.source)
-        incoming[event_id].append(row)
+        incoming[event_id][e.source] = row
         source_rows.append({
             "source": e.source, "source_event_id": e.source_event_id, "event_id": event_id,
             "source_url": e.source_url, "missing_runs": 0, "last_seen_at": now,
@@ -53,16 +53,15 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
         })
 
     event_rows, change_rows = [], []
-    for event_id, rows in incoming.items():
+    for event_id, by_source in incoming.items():
         old = stored.get(event_id)
         if old and sources_of[event_id] & down:
             continue
-        merged = dedupe.merge(rows, old)
+        merged = dedupe.merge(list(by_source.values()), old)
         # seen on a source this run and passed is_relevant (still open): reopen if it was closed/stale
         merged["status"] = "open"
-        # every row in one upsert must carry the same keys, so trust_label is always set
-        label = (old or {}).get("trust_label")
-        merged["trust_label"] = label if label and label != "stale" else "check_details"
+        merged["warnings"] = trust.red_flags(merged, by_source)
+        merged["trust_label"] = trust.label(merged, merged["warnings"], sources_of[event_id])
         merged["fingerprint"] = changes.fingerprint(merged)
         # old fingerprint missing = first run with change tracking: set it, don't report a change
         if old and old.get("fingerprint") and old["fingerprint"] != merged["fingerprint"]:
