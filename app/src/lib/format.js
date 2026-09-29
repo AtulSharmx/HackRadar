@@ -89,3 +89,14 @@ export function timeShort(date) {
   const m = String(d.getUTCMinutes()).padStart(2, '0');
   return `${h % 12 || 12}:${m} ${h < 12 ? 'am' : 'pm'}`;
 }
+
+// "just now", "5 min ago", "2 h ago", "3 days ago" (footer and offline banner)
+export function ago(iso, now = new Date()) {
+  const min = Math.floor((now - new Date(iso)) / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} h ago`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? '1 day ago' : `${d} days ago`;
+}

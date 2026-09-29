@@ -95,7 +95,8 @@ function EventCard({ event, km = null, saved = false, onPress, onToggleSave, now
         </View>
         <View style={styles.row1Right}>
           <MaterialCommunityIcons name={trust.icon} size={20} color={colors[trust.tone]} />
-          <Bookmark saved={saved} onToggle={onToggleSave} title={event.title} colors={colors} />
+          {/* no save handler yet (saving lands in step 29): don't show a button that does nothing */}
+          {onToggleSave ? <Bookmark saved={saved} onToggle={onToggleSave} title={event.title} colors={colors} /> : null}
         </View>
       </View>
 
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   },
   row1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: layout.minTouch },
   countdown: { flexDirection: 'row', alignItems: 'center', gap: space.xs, flexShrink: 1 },
-  row1Right: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginRight: -space.md },
+  row1Right: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   bookmark: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
   organizer: { marginTop: space.xs },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg, rowGap: space.xs, marginTop: space.md },
