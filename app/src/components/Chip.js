@@ -7,7 +7,8 @@ import PressableScale from './PressableScale';
 
 // Filter chip. Off: border only. On: brand fill + small x (the whole chip toggles; x is a visual cue).
 // Visual height 36, touch area stretched to 48 with hitSlop.
-export default function Chip({ label, selected = false, onPress, showRemove = selected }) {
+// role: checkbox (multi-select, filters) or radio (pick one)
+export default function Chip({ label, selected = false, onPress, showRemove = selected, role = 'checkbox' }) {
   const { colors } = useAppTheme();
   return (
     <PressableScale
@@ -16,7 +17,7 @@ export default function Chip({ label, selected = false, onPress, showRemove = se
         onPress?.();
       }}
       hitSlop={6}
-      accessibilityRole="checkbox"
+      accessibilityRole={role}
       accessibilityState={{ checked: selected }}
       accessibilityLabel={label}
       style={[
