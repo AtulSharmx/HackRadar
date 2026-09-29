@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import config, geocode, health, notify
+from . import config, geocode, health, notify, quality
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -22,7 +22,7 @@ def valid(e) -> bool:
 def collect(adapter, client) -> tuple[list, dict]:
     """Fetch + parse one source. Never raises: a broken source must not stop the others."""
     t0 = time.monotonic()
-    stat = {"found": 0, "error": None, "fetched": 0, "ok": False}
+    stat = {"found": 0, "error": None, "fetched": 0, "ok": False, "excluded": {}, "excluded_ids": []}
     events = []
     try:
         raws = adapter.fetch(client)
@@ -35,6 +35,11 @@ def collect(adapter, client) -> tuple[list, dict]:
                 bad += 1
                 continue
             if valid(e) and adapter.is_relevant(e):
+                reason = quality.not_hackathon_reason(e.title)
+                if reason:   # quality gate (Plan A2): esports, quizzes, robot races... never reach the feed
+                    stat["excluded"][reason] = stat["excluded"].get(reason, 0) + 1
+                    stat["excluded_ids"].append(e.source_event_id)
+                    continue
                 events.append(e)
         if bad:
             stat["error"] = f"{bad} of {len(raws)} records failed to parse"
@@ -45,6 +50,19 @@ def collect(adapter, client) -> tuple[list, dict]:
     stat["found"] = len(events)
     stat["ms"] = int((time.monotonic() - t0) * 1000)
     return events, stat
+
+
+def hide_excluded(db, stats):
+    """Events stored before the quality gate existed disappear now, not after 3 missed runs."""
+    for name, s in stats.items():
+        ids = s.get("excluded_ids") or []
+        for i in range(0, len(ids), 100):
+            links = db.select_all("event_sources", select="event_id", source=f"eq.{name}",
+                                  source_event_id=f"in.({','.join(ids[i:i + 100])})")
+            if links:
+                r = db.http.patch("/events", params={"id": f"in.({','.join(l['event_id'] for l in links)})", "status": "eq.open"},
+                                  json={"status": "stale", "trust_label": "stale"})
+                r.raise_for_status()
 
 
 def main() -> int:
@@ -67,7 +85,9 @@ def main() -> int:
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
               + (f", details {s['enrich']}" if s.get("enrich") else "")
+              + (f", not hackathons {s['excluded']}" if s.get("excluded") else "")
               + (f", ERROR {s['error']}" if s["error"] else ""))
+    hide_excluded(db, stats)
     ok = [name for name, s in stats.items() if s["ok"]]
     end = db.rpc("end_of_run", ok_sources=ok, run_started=run_started)[0]
     print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}")
