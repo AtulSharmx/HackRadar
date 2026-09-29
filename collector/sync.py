@@ -10,8 +10,8 @@ from .db import Db
 from .models import Event
 
 
-def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dict[str, int], int]:
-    """Returns (new-event counts per source, number of tracked changes recorded).
+def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dict[str, int], int, list[str]]:
+    """Returns (new-event counts per source, number of tracked changes recorded, new event ids).
     down: sources that failed this run. Events linked to them are left as stored, because merging
     only the surviving source's values would record fake changes (and flip back next run)."""
     stored = {r["id"]: r for r in db.select_all("events", select="*")}
@@ -82,4 +82,4 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
         r = db.http.patch("/events", params={"id": f"in.({','.join(moved)})"},
                           json={"lat": None, "lng": None, "location_approximate": False})
         r.raise_for_status()
-    return dict(new_count), len(change_rows)
+    return dict(new_count), len(change_rows), sorted(new_ids)

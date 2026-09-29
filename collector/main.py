@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import geocode, health
+from . import geocode, health, notify
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -54,7 +54,7 @@ def main() -> int:
     for a in ADAPTERS:
         events, stats[a.name] = collect(a, client)
         all_events += events
-    new, n_changes = sync(db, all_events, down={n for n, s in stats.items() if not s['ok']})
+    new, n_changes, new_ids = sync(db, all_events, down={n for n, s in stats.items() if not s['ok']})
     for name, s in stats.items():
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
@@ -64,6 +64,10 @@ def main() -> int:
     print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}")
     try:   # geocoding is best effort: Nominatim being down must not fail the run
         print(f"geocode: {geocode.run(db)}")
+    except Exception:
+        traceback.print_exc()
+    try:   # after geocoding, so new offline events already have a distance
+        print(f"telegram: {notify.new_matches(db, new_ids)} new matches, {notify.saved_changes(db)} saved-event changes")
     except Exception:
         traceback.print_exc()
     try:   # a broken health check must not fail an otherwise good run
