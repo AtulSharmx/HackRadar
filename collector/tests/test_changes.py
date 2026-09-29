@@ -27,3 +27,9 @@ def test_untracked_field_is_ignored():
 def test_several_fields():
     new = {**OLD, "city": "Mumbai", "venue_address": "Hall B", "fee_amount": 200}
     assert changes.diff(OLD, new)["changed_fields"] == ["venue_address", "city", "fee_amount"]
+
+
+def test_value_appearing_for_the_first_time_is_not_a_change():
+    new = {**OLD, "start_date": "2026-10-09T04:00:00+00:00"}   # was None, details just found it
+    assert changes.fingerprint(OLD) != changes.fingerprint(new)
+    assert changes.diff(OLD, new) is None

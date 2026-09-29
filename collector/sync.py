@@ -49,6 +49,7 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
         source_rows.append({
             "source": e.source, "source_event_id": e.source_event_id, "event_id": event_id,
             "source_url": e.source_url, "missing_runs": 0, "last_seen_at": now,
+            "source_updated_at": e.detail_updated_at,   # None = details still to fetch next run
             "raw_hash": hashlib.sha256(json.dumps(row, sort_keys=True, default=str).encode()).hexdigest(),
         })
 

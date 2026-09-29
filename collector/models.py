@@ -2,7 +2,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
 # fields used by the collector but not stored on the events row
-SOURCE_ONLY = ("source", "source_event_id", "source_url", "in_india", "is_open")
+SOURCE_ONLY = ("source", "source_event_id", "source_url", "in_india", "is_open",
+               "listing_updated_at", "detail_updated_at")
 
 
 @dataclass
@@ -34,6 +35,9 @@ class Event:
     prize_amount_inr: int | None = None
     prize_approximate: bool = False
     eligibility_text: str | None = None
+    rounds: list[dict] = field(default_factory=list)   # [{title, start, end}] UTC iso, from source details
+    listing_updated_at: str | None = None   # the source's own updated_at, from the list
+    detail_updated_at: str | None = None    # set when details are current; saved on event_sources
 
     def to_row(self) -> dict:
         row = {k: v for k, v in asdict(self).items() if k not in SOURCE_ONLY}

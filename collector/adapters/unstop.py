@@ -1,5 +1,5 @@
 """Unstop: public JSON at /api/public/opportunity/search-result (allowed by robots.txt)."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from .. import config
 from ..models import Event
@@ -70,7 +70,53 @@ def parse(raw: dict) -> Event:
         prize_amount_inr=prize,
         eligibility_text=strip_html(", ".join(f["name"] for f in raw.get("filters") or []
                                               if f.get("type") == "eligible"), 300),
+        listing_updated_at=raw.get("updated_at"),
     )
+
+
+# ---------- details (A1): real event dates from the round list ----------
+
+DETAIL_URL = "https://unstop.com/api/public/competition/{}"
+
+
+def parse_rounds(competition: dict) -> list[dict]:
+    """[{title, start, end}] in UTC, sorted by start. Registration windows are not rounds of the event.
+    Note: Unstop's top-level start_date is when registration opens, so it is never used as the event start."""
+    out = []
+    for r in sorted(competition.get("rounds") or [], key=lambda r: r.get("round_order") or 0):
+        if r.get("is_hidden") or r.get("is_inactive"):
+            continue
+        for d in r.get("details") or []:
+            title = strip_html(d.get("title"), 80) or "Round"
+            start, end = parse_date(d.get("start_date")), parse_date(d.get("end_date"))
+            if "registration" in title.lower() or not (start or end):
+                continue
+            out.append({"title": title, "start": start.isoformat() if start else None,
+                        "end": end.isoformat() if end else None})
+    return sorted(out, key=lambda x: x["start"] or x["end"])
+
+
+def enrich(client, events: list[Event], known: dict[str, str | None], limit: int) -> dict:
+    """Fill rounds + start_date from the detail API for events that are new or changed on Unstop.
+    known: source_event_id -> updated_at stored when we last read details. Returns counts."""
+    todo = []
+    for e in events:
+        if e.listing_updated_at and known.get(e.source_event_id) == e.listing_updated_at:
+            e.detail_updated_at = e.listing_updated_at   # details still current; keep the stored ones
+        else:
+            todo.append(e)
+    done = 0
+    for e in todo[:limit]:
+        comp = (client.get_json(DETAIL_URL.format(int(e.source_event_id))).get("data") or {}).get("competition") or {}
+        e.rounds = parse_rounds(comp)
+        if e.end_date:   # organizers sometimes add notices as "rounds" dated after the event (seen 29 Sep)
+            last = (e.end_date + timedelta(days=1)).isoformat()
+            e.rounds = [r for r in e.rounds if not r["start"] or r["start"] <= last]
+        starts = [datetime.fromisoformat(r["start"]) for r in e.rounds if r["start"]]
+        e.start_date = min(starts) if starts else None
+        e.detail_updated_at = e.listing_updated_at
+        done += 1
+    return {"details_fetched": done, "details_waiting": max(0, len(todo) - limit)}
 
 
 def is_relevant(e: Event) -> bool:
