@@ -13,8 +13,14 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     the other 93 have no rounds on Unstop at all, so the app says "Start date not listed". 0 start-after-end.
   - Learned: Unstop's top-level start_date is when registration opens, never the event start; organizers
     sometimes add notices as "rounds" dated after the event (now dropped). Structured eligibility moved to A3.
-- [ ] A2 Quality gate: "is this a hackathon?" (source category + rules for esports/quiz/olympiad/poster/hiring-only), date sanity, prize outliers → review_queue.
-  - Check: no esports/poster events in the feed; the 4 found on 29 Sep are caught.
+- [x] A2 Quality gate: "is this a hackathon?" + date sanity (collector/quality.py).
+  - Check: no esports/poster events in the feed; the 4 found on 29 Sep are caught. Result: 20 of 232 excluded
+    (15 robot races, 2 esports, olympiad, poster, business plan), each checked by hand; 0 real hackathons lost
+    (tests keep 20 odd-looking real titles in). Feed: 213 open hackathons.
+  - Learned: Unstop's category (231/232 "online_coding_challenge") and organizer tags ("Quizzes & Treasure Hunt"
+    on NASA Space Apps) are useless for this, so only explicit title rules exclude; the default is keep.
+    Date problems become warnings, never silent rewrites. Coding contests stay for now (can't tell from titles).
+    Prize outliers dropped: no real case found.
 - [ ] A3 Themes v2 from tags, skills and description.
   - Check: "other" under 15%.
 - [ ] A4 Devfolio adapter (fetch_url POST variant, fixture, tests).

@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
-from . import config
+from . import config, quality
 from .normalize import IST
 
 
@@ -44,6 +44,8 @@ def red_flags(row: dict, by_source: dict[str, dict]) -> list[dict]:
     if reg and page and reg != page and not _on(reg, config.PLATFORM_HOSTS) and not _on(reg, (page,)):
         flags.append({"code": "domain_mismatch",
                       "text": f"Registration goes to {reg}, not the event's own site {page}"})
+
+    flags += quality.date_flags(row)
 
     if set(by_source) == {"manual"} and _on(reg, config.SOCIAL_HOSTS):
         flags.append({"code": "social_only", "text": f"Only known from a {reg} link, no official page"})
