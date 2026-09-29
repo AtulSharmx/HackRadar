@@ -6,13 +6,16 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, T
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
+import { useToast } from '../../components/Toast';
 import TrustLabel from '../../components/TrustLabel';
 import { loadCache } from '../../lib/feed';
 import { MODE_NAMES, THEME_NAMES } from '../../lib/labels';
 import {
   ago, countdown, dateRange, dateTime, feeLong, hostOf, prizeShort, safeUrl, teamSize,
 } from '../../lib/format';
+import { useSaved } from '../../lib/saved';
 import { supabase } from '../../lib/supabase';
+import { useSaveToggle } from '../../lib/useSaveToggle';
 import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../../theme';
 
 
@@ -51,6 +54,9 @@ export default function EventDetail() {
   const { colors, elevation } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { event, missing } = useEvent(id);
+  const saved = useSaved();
+  const toggleSave = useSaveToggle();
+  const toast = useToast();
 
   if (!event) {
     return (
@@ -84,10 +90,19 @@ export default function EventDetail() {
     themes.map((t) => THEME_NAMES[t]).slice(0, 2).join(', ') || null,
   ].filter(Boolean).join(' · ');
 
-  const apply = () => WebBrowser.openBrowserAsync(event.registration_url, {
-    toolbarColor: colors.surface,
-    controlsColor: colors.brand,
-  });
+  // App Flow: after coming back from the registration page, offer to mark it Registered
+  const apply = async () => {
+    await WebBrowser.openBrowserAsync(event.registration_url, { toolbarColor: colors.surface, controlsColor: colors.brand });
+    if (saved.statusOf(event.id) === 'registered') return;
+    toast('Did you register?', {
+      duration: 8000,
+      action: {
+        label: 'Yes',
+        onPress: () => (saved.isSaved(event.id) ? saved.setStatus(event.id, 'registered') : saved.save(event, 'registered')),
+      },
+    });
+  };
+  const isSaved = saved.isSaved(event.id);
   const share = () => Share.share({
     message: [
       event.title,
@@ -193,7 +208,18 @@ export default function EventDetail() {
             Opens {host}
           </Text>
         ) : null}
-        <Button label={applyLabel} onPress={apply} disabled={closed || !linkOk} />
+        <View style={styles.barRow}>
+          <Pressable
+            onPress={() => toggleSave(event)}
+            style={[styles.saveBtn, { borderColor: colors.brand }]}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? 'Remove from saved' : 'Save'}
+            accessibilityState={{ selected: isSaved }}
+          >
+            <MaterialCommunityIcons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={colors.brand} />
+          </Pressable>
+          <Button label={applyLabel} onPress={apply} disabled={closed || !linkOk} style={styles.applyBtn} />
+        </View>
       </View>
     </View>
   );
@@ -221,4 +247,7 @@ const styles = StyleSheet.create({
     paddingTop: space.sm, paddingHorizontal: layout.screenPadding, borderTopWidth: StyleSheet.hairlineWidth,
   },
   opens: { textAlign: 'center', marginBottom: space.xs },
+  barRow: { flexDirection: 'row', gap: space.sm },
+  saveBtn: { width: 56, minHeight: layout.minTouch, borderWidth: 1.5, borderRadius: radius.button, alignItems: 'center', justifyContent: 'center' },
+  applyBtn: { flex: 1 },
 });

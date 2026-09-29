@@ -17,6 +17,8 @@ import { activeChips, applyView, defaultFilters, SORTS } from '../../lib/feedVie
 import { ago } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
 import { usePrefs } from '../../lib/prefs';
+import { useSaved } from '../../lib/saved';
+import { useSaveToggle } from '../../lib/useSaveToggle';
 import { useSession } from '../../lib/session';
 import { supabase } from '../../lib/supabase';
 import { useFeed } from '../../lib/useFeed';
@@ -45,6 +47,8 @@ export default function FeedScreen() {
   const { user } = useSession();
   const { events, fetchedAt, hasCache, syncing, error, refresh } = useFeed();
   const { prefs } = usePrefs();
+  const saved = useSaved();
+  const toggleSave = useSaveToggle();
   const me = prefs?.lat != null ? { lat: prefs.lat, lng: prefs.lng } : null;
 
   const defaults = useMemo(() => defaultFilters(prefs), [prefs]);
@@ -152,9 +156,15 @@ export default function FeedScreen() {
         data={shown}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => (
-          <EventCard event={item} km={distanceKm(item, me)} onPress={() => router.push(`/event/${item.id}`)} />
+          <EventCard
+            event={item}
+            km={distanceKm(item, me)}
+            saved={saved.isSaved(item.id)}
+            onToggleSave={() => toggleSave(item)}
+            onPress={() => router.push(`/event/${item.id}`)}
+          />
         )}
-        extraData={me}
+        extraData={[me, saved.entries]}
         onScroll={onScroll}
         scrollEventThrottle={16}
         keyboardDismissMode="on-drag"

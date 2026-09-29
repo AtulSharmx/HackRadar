@@ -53,7 +53,7 @@ function Bookmark({ saved, onToggle, title, colors }) {
 }
 
 // event: a row from the events table. km: distance from me (null when unknown).
-function EventCard({ event, km = null, saved = false, onPress, onToggleSave, now }) {
+function EventCard({ event, km = null, saved = false, onPress, onLongPress, onToggleSave, now }) {
   const { colors, elevation } = useAppTheme();
   const cd = countdown(event, now);
   const inactive = cd.tone === 'muted';
@@ -78,6 +78,7 @@ function EventCard({ event, km = null, saved = false, onPress, onToggleSave, now
   return (
     <PressableScale
       onPress={onPress}
+      onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityLabel={spoken}
       accessibilityHint="Opens details"
@@ -95,7 +96,6 @@ function EventCard({ event, km = null, saved = false, onPress, onToggleSave, now
         </View>
         <View style={styles.row1Right}>
           <MaterialCommunityIcons name={trust.icon} size={20} color={colors[trust.tone]} />
-          {/* no save handler yet (saving lands in step 29): don't show a button that does nothing */}
           {onToggleSave ? <Bookmark saved={saved} onToggle={onToggleSave} title={event.title} colors={colors} /> : null}
         </View>
       </View>
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   row1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: layout.minTouch },
   countdown: { flexDirection: 'row', alignItems: 'center', gap: space.xs, flexShrink: 1 },
-  row1Right: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  row1Right: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginRight: -space.md }, // bookmark's 48dp target reaches the card edge
   bookmark: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
   organizer: { marginTop: space.xs },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg, rowGap: space.xs, marginTop: space.md },
