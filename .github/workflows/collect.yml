@@ -1,10 +1,8 @@
 name: collect
 
 on:
-  # Schedule paused 29 Sep 2026: Devpost and Unstop block GitHub's data-centre IPs (captcha / 403).
-  # The collector is moving to another cloud; manual runs stay available for testing.
-  # schedule:
-  #   - cron: "23 */6 * * *"
+  schedule:
+    - cron: "23 */6 * * *"   # every 6 h at :23 UTC (top of the hour is GitHub's busiest slot)
   workflow_dispatch:          # "Run workflow" button, also from the GitHub mobile app
 
 concurrency:
@@ -35,6 +33,9 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          # Sources block GitHub's IPs; pages are fetched through Supabase (migration 0006_fetch_url)
+          FETCH_VIA: supabase
+          SOURCES: unstop
       - name: Alert on failure
         if: failure()
         env:
