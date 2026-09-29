@@ -1,0 +1,66 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+
+import OnboardingStep from '../../components/OnboardingStep';
+import { useDraft } from '../../lib/draft';
+import { usePrefs } from '../../lib/prefs';
+import { space, type, useAppTheme } from '../../theme';
+
+const WHAT = [
+  ['radar', 'New hackathons that match you'],
+  ['clock-outline', 'Reminders 7 days, 48 h and 24 h before a saved deadline'],
+  ['calendar-alert', 'A heads-up when a saved event changes its date or venue'],
+];
+
+// Step 5. The Android permission prompt appears only after tapping Allow.
+export default function NotificationsStep() {
+  const { colors } = useAppTheme();
+  const { draft } = useDraft();
+  const { save } = usePrefs();
+
+  // No city -> online only until a city is set (App Flow, step 4 skip rule)
+  const finish = (notifications) => {
+    save({ ...draft, notifications, modes: draft.city ? draft.modes : ['online'] });
+    router.replace('/');
+  };
+
+  const allow = async () => {
+    let granted = false;
+    try {
+      const res = await Notifications.requestPermissionsAsync();
+      granted = res.granted;
+    } catch {
+      granted = false; // never block finishing onboarding on this
+    }
+    finish(granted);
+  };
+
+  return (
+    <OnboardingStep
+      step={5}
+      title="Get told before you miss one"
+      next={{ label: 'Allow notifications', onPress: allow }}
+      skip={() => finish(false)}
+    >
+      <View style={styles.list}>
+        {WHAT.map(([icon, text]) => (
+          <View key={text} style={styles.item}>
+            <MaterialCommunityIcons name={icon} size={24} color={colors.brand} />
+            <Text style={[type.body, styles.itemText, { color: colors.textPrimary }]}>{text}</Text>
+          </View>
+        ))}
+      </View>
+      <Text style={[type.meta, { color: colors.textSecondary }]}>
+        You can turn these off any time in Settings.
+      </Text>
+    </OnboardingStep>
+  );
+}
+
+const styles = StyleSheet.create({
+  list: { gap: space.lg },
+  item: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  itemText: { flex: 1 },
+});

@@ -8,17 +8,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from '../../components/Button';
 import TrustLabel from '../../components/TrustLabel';
 import { loadCache } from '../../lib/feed';
+import { MODE_NAMES, THEME_NAMES } from '../../lib/labels';
 import {
   ago, countdown, dateRange, dateTime, feeLong, hostOf, prizeShort, safeUrl, teamSize,
 } from '../../lib/format';
 import { supabase } from '../../lib/supabase';
 import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../../theme';
 
-const THEME_NAMES = {
-  ai_ml: 'AI/ML', cybersecurity: 'Cybersecurity', web: 'Web', mobile: 'Mobile', data_science: 'Data science',
-  blockchain: 'Blockchain', iot_hardware: 'IoT/Hardware', open_innovation: 'Open innovation', other: 'Other',
-};
-const MODE_NAMES = { online: 'Online', offline: 'Offline', hybrid: 'Hybrid' };
 
 // Cache first (instant, works offline); fall back to the server for events opened from a link or notification.
 function useEvent(id) {

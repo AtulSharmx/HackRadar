@@ -10,6 +10,8 @@ import Button from '../../components/Button';
 import EventCard from '../../components/EventCard';
 import SkeletonCard from '../../components/SkeletonCard';
 import { ago } from '../../lib/format';
+import { distanceKm } from '../../lib/geo';
+import { usePrefs } from '../../lib/prefs';
 import { useFeed } from '../../lib/useFeed';
 import { layout, space, type, useAppTheme } from '../../theme';
 
@@ -32,6 +34,8 @@ export default function FeedScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { events, fetchedAt, hasCache, syncing, error, refresh } = useFeed();
+  const { prefs } = usePrefs();
+  const me = prefs?.lat != null ? { lat: prefs.lat, lng: prefs.lng } : null;
 
   // brief: sync indicator on the right of the header
   useLayoutEffect(() => {
@@ -71,10 +75,14 @@ export default function FeedScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {error ? <Banner icon="wifi-off" text={`Offline. Showing events from ${ago(fetchedAt)}.`} /> : null}
+      {!me && !error ? <Banner icon="map-marker-off-outline" text="Set your city to see how far offline hackathons are." /> : null}
       <FlashList
         data={events}
         keyExtractor={(e) => e.id}
-        renderItem={({ item }) => <EventCard event={item} onPress={() => router.push(`/event/${item.id}`)} />}
+        renderItem={({ item }) => (
+          <EventCard event={item} km={distanceKm(item, me)} onPress={() => router.push(`/event/${item.id}`)} />
+        )}
+        extraData={me}
         ItemSeparatorComponent={Separator}
         contentContainerStyle={{ ...styles.list, paddingBottom: insets.bottom + space.xxl }}
         refreshControl={
