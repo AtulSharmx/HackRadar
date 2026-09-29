@@ -58,3 +58,12 @@ test('dates in the brief format', () => {
   expect(timeShort('2026-09-30T18:29:00Z')).toBe('11:59 pm');
   expect(timeShort('2026-09-30T03:30:00Z')).toBe('9:00 am');
 });
+
+test('ago', () => {
+  const { ago } = require('../format');
+  expect(ago('2026-09-29T17:29:40Z', NOW)).toBe('just now');
+  expect(ago('2026-09-29T17:25:00Z', NOW)).toBe('5 min ago');
+  expect(ago('2026-09-29T15:10:00Z', NOW)).toBe('2 h ago');
+  expect(ago('2026-09-28T17:00:00Z', NOW)).toBe('1 day ago');
+  expect(ago('2026-09-26T17:00:00Z', NOW)).toBe('3 days ago');
+});

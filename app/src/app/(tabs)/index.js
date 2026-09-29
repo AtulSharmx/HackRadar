@@ -1,65 +1,107 @@
-import { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { FlashList } from '@shopify/flash-list';
+import { useNavigation } from 'expo-router';
+import { useLayoutEffect } from 'react';
+import { ActivityIndicator, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import Banner from '../../components/Banner';
+import Button from '../../components/Button';
 import EventCard from '../../components/EventCard';
-import { useToast } from '../../components/Toast';
-import { dateShort } from '../../lib/format';
-import { distanceKm } from '../../lib/geo';
+import SkeletonCard from '../../components/SkeletonCard';
+import { ago } from '../../lib/format';
+import { useFeed } from '../../lib/useFeed';
 import { layout, space, type, useAppTheme } from '../../theme';
 
-// STEP 23 PREVIEW, dev builds only: real events copied from Supabase to show the components.
-// Step 25 replaces this whole file with the live feed.
-const snapshot = __DEV__ ? require('../../dev/preview-events.json') : null;
-const GURUGRAM = { lat: 28.46, lng: 77.03 }; // my device row's rounded location
+function Separator() {
+  return <View style={{ height: layout.cardGap }} />;
+}
+
+function Centered({ icon, text, action, colors }) {
+  return (
+    <View style={styles.centered}>
+      <MaterialCommunityIcons name={icon} size={32} color={colors.textSecondary} />
+      <Text style={[type.body, styles.centerText, { color: colors.textPrimary }]}>{text}</Text>
+      {action}
+    </View>
+  );
+}
 
 export default function FeedScreen() {
   const { colors } = useAppTheme();
-  const toast = useToast();
-  const [saved, setSaved] = useState({});
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const { events, fetchedAt, hasCache, syncing, error, refresh } = useFeed();
 
-  if (!snapshot) {
-    return <View style={[styles.screen, { backgroundColor: colors.background }]} />;
-  }
-  const taken = new Date(snapshot.snapshot_taken);
+  // brief: sync indicator on the right of the header
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () =>
+        syncing ? (
+          <ActivityIndicator style={styles.sync} color={colors.brand} accessibilityLabel="Updating hackathons" />
+        ) : null,
+    });
+  }, [navigation, syncing, colors.brand]);
 
-  const toggle = (e) => {
-    const was = !!saved[e.id];
-    setSaved((s) => ({ ...s, [e.id]: !was }));
-    if (!was) {
-      toast('Saved. Reminders set for 7 days, 48 h and 24 h before the deadline.', {
-        action: { label: 'Undo', onPress: () => setSaved((s) => ({ ...s, [e.id]: false })) },
-      });
+  // First open, nothing cached yet
+  if (!hasCache) {
+    if (error) {
+      return (
+        <View style={[styles.screen, { backgroundColor: colors.background }]}>
+          <Centered
+            icon="wifi-off"
+            text="Can't load hackathons. Check your connection."
+            action={<Button label="Retry" variant="secondary" onPress={refresh} style={styles.centerAction} />}
+            colors={colors}
+          />
+        </View>
+      );
     }
-  };
+    return (
+      <View style={[styles.screen, styles.list, { backgroundColor: colors.background }]}>
+        {[0, 1, 2, 3].map((i) => (
+          <View key={i} style={i ? { marginTop: layout.cardGap } : null}>
+            <SkeletonCard />
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   return (
-    <FlatList
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.list}
-      data={snapshot.events}
-      keyExtractor={(e) => e.id}
-      ItemSeparatorComponent={() => <View style={{ height: layout.cardGap }} />}
-      ListHeaderComponent={
-        <Text style={[type.meta, styles.note, { color: colors.textSecondary }]}>
-          Component preview: {snapshot.events.length} real events as of {dateShort(taken)}, distances from Gurugram.
-          The live feed arrives in step 25.
-        </Text>
-      }
-      renderItem={({ item }) => (
-        <EventCard
-          event={item}
-          km={distanceKm(item, GURUGRAM)}
-          saved={!!saved[item.id]}
-          onToggleSave={() => toggle(item)}
-          now={taken}
-        />
-      )}
-    />
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      {error ? <Banner icon="wifi-off" text={`Offline. Showing events from ${ago(fetchedAt)}.`} /> : null}
+      <FlashList
+        data={events}
+        keyExtractor={(e) => e.id}
+        renderItem={({ item }) => <EventCard event={item} />}
+        ItemSeparatorComponent={Separator}
+        contentContainerStyle={{ ...styles.list, paddingBottom: insets.bottom + space.xxl }}
+        refreshControl={
+          <RefreshControl refreshing={syncing} onRefresh={refresh} colors={[colors.brand]} progressBackgroundColor={colors.surface} />
+        }
+        ListEmptyComponent={
+          // never pretend there are simply no hackathons (App Flow, edge case 5)
+          <Centered icon="radar" text="No new events found recently. We're checking the sources." colors={colors} />
+        }
+        ListFooterComponent={
+          events.length ? (
+            <Text style={[type.meta, styles.footer, { color: colors.textSecondary }]}>
+              {events.length} open hackathons · Updated {ago(fetchedAt)}
+            </Text>
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  list: { padding: layout.screenPadding, paddingBottom: space.xxl * 3 },
-  note: { marginBottom: space.md },
+  list: { padding: layout.screenPadding },
+  sync: { marginRight: layout.screenPadding },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xxl, gap: space.md },
+  centerText: { textAlign: 'center' },
+  centerAction: { marginTop: space.sm },
+  footer: { textAlign: 'center', marginTop: space.xl },
 });
