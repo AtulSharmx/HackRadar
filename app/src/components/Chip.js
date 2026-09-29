@@ -1,0 +1,52 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Haptics from 'expo-haptics';
+import { StyleSheet, Text } from 'react-native';
+
+import { CHROME_MAX_SCALE, radius, space, type, useAppTheme } from '../theme';
+import PressableScale from './PressableScale';
+
+// Filter chip. Off: border only. On: brand fill + small x (the whole chip toggles; x is a visual cue).
+// Visual height 36, touch area stretched to 48 with hitSlop.
+export default function Chip({ label, selected = false, onPress, showRemove = selected }) {
+  const { colors } = useAppTheme();
+  return (
+    <PressableScale
+      onPress={() => {
+        Haptics.selectionAsync();
+        onPress?.();
+      }}
+      hitSlop={6}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={label}
+      style={[
+        styles.chip,
+        selected
+          ? { backgroundColor: colors.brand, borderColor: colors.brand }
+          : { backgroundColor: 'transparent', borderColor: colors.border },
+      ]}
+    >
+      <Text
+        style={[type.label, { color: selected ? colors.onBrand : colors.textPrimary }]}
+        maxFontSizeMultiplier={CHROME_MAX_SCALE}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      {showRemove ? <MaterialCommunityIcons name="close" size={16} color={colors.onBrand} /> : null}
+    </PressableScale>
+  );
+}
+
+const styles = StyleSheet.create({
+  chip: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+});

@@ -1,6 +1,7 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 
+import { ToastProvider } from '../components/Toast';
 import { useAppTheme } from '../theme';
 
 // Navigation chrome takes our tokens too, so dark mode never flashes white between screens.
@@ -21,10 +22,12 @@ export default function RootLayout() {
   };
   return (
     <ThemeProvider value={theme}>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
+      <ToastProvider>
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
