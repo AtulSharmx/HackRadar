@@ -1,8 +1,10 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '../components/Toast';
 import { PrefsProvider, usePrefs } from '../lib/prefs';
+import { SavedProvider } from '../lib/saved';
 import { SessionProvider } from '../lib/session';
 import { useAppTheme } from '../theme';
 
@@ -48,15 +50,19 @@ export default function RootLayout() {
     },
   };
   return (
-    <ThemeProvider value={theme}>
-      <SessionProvider>
-        <PrefsProvider>
-          <ToastProvider>
-            <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-            <Routes />
-          </ToastProvider>
-        </PrefsProvider>
-      </SessionProvider>
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={theme}>
+        <SessionProvider>
+          <PrefsProvider>
+            <SavedProvider>
+              <ToastProvider>
+                <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+                <Routes />
+              </ToastProvider>
+            </SavedProvider>
+          </PrefsProvider>
+        </SessionProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
