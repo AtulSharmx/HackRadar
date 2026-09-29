@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import geocode, health, notify
+from . import config, geocode, health, notify
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -53,11 +53,20 @@ def main() -> int:
     all_events, stats = [], {}
     for a in ADAPTERS:
         events, stats[a.name] = collect(a, client)
+        if events and hasattr(a, "enrich"):
+            try:   # details are extra: a failure here must not drop the source's events
+                known = {r["source_event_id"]: r["source_updated_at"] for r in
+                         db.select_all("event_sources", select="source_event_id,source_updated_at", source=f"eq.{a.name}")}
+                stats[a.name]["enrich"] = a.enrich(client, events, known, config.MAX_DETAILS_PER_RUN)
+            except Exception as exc:
+                traceback.print_exc()
+                stats[a.name]["enrich"] = {"error": f"{type(exc).__name__}: {exc}"[:200]}
         all_events += events
     new, n_changes, new_ids = sync(db, all_events, down={n for n, s in stats.items() if not s['ok']})
     for name, s in stats.items():
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
+              + (f", details {s['enrich']}" if s.get("enrich") else "")
               + (f", ERROR {s['error']}" if s["error"] else ""))
     ok = [name for name, s in stats.items() if s["ok"]]
     end = db.rpc("end_of_run", ok_sources=ok, run_started=run_started)[0]

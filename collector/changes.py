@@ -30,7 +30,8 @@ def fingerprint(row: dict) -> str:
 
 def diff(old: dict, new: dict) -> dict | None:
     """event_changes payload for the tracked fields that differ, or None."""
-    fields = [k for k in TRACKED if not same(old.get(k), new.get(k))]
+    # a value appearing for the first time (unknown -> known) is new information, not a change
+    fields = [k for k in TRACKED if old.get(k) is not None and not same(old.get(k), new.get(k))]
     if not fields:
         return None
     return {"changed_fields": fields,

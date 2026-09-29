@@ -171,7 +171,20 @@ export default function EventDetail() {
 
         <View style={styles.details}>
           <Row label="Registration closes" value={event.registration_deadline ? dateTime(event.registration_deadline) : 'Deadline not listed'} colors={colors} />
-          <Row label="Event dates" value={dateRange(event.start_date, event.end_date)} colors={colors} />
+          <Row
+            label="Event dates"
+            value={
+              event.start_date
+                ? dateRange(event.start_date, event.end_date)
+                : event.end_date ? `Start date not listed, ends ${dateRange(null, event.end_date)}` : 'Not listed'
+            }
+            colors={colors}
+          />
+          <Row
+            label="Rounds"
+            value={(event.rounds || []).map((r) => `${r.title} · ${dateRange(r.start, r.end)}`).join('\n') || null}
+            colors={colors}
+          />
           <Row label="Venue" value={venue || 'Venue not listed'} colors={colors} />
           <Row label="Team" value={team || (event.solo_allowed ? 'Solo allowed' : null)} colors={colors} />
           <Row label="Fee" value={feeLong(event.fee_amount)} colors={colors} />

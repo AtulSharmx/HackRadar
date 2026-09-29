@@ -53,9 +53,58 @@ def test_unstop_fixture():
 
 
 def test_rows_fit_table():
-    """to_row keys must be real events columns (schema in supabase/migrations/0001_init.sql)."""
-    schema = (Path(__file__).parents[2] / "supabase/migrations/0001_init.sql").read_text()
+    """to_row keys must be real events columns (created in 0001, added by later migrations)."""
+    import re
+    migrations = Path(__file__).parents[2] / "supabase/migrations"
+    schema = (migrations / "0001_init.sql").read_text()
     table = schema.split("create table events (")[1].split(");")[0]
     cols = {line.split()[0] for line in table.strip().splitlines() if line.strip()}
+    for f in sorted(migrations.glob("*.sql")):
+        cols |= set(re.findall(r"alter table (?:public\.)?events add column (?:if not exists )?(\w+)", f.read_text()))
     row = unstop.parse(load("unstop_page1.json")["data"]["data"][0]).to_row()
     assert set(row) <= cols
+
+
+# ---------- A1: Unstop details ----------
+
+def test_unstop_rounds_from_real_detail():
+    comp = load("unstop_detail_1762222.json")["data"]["competition"]
+    rounds = unstop.parse_rounds(comp)
+    assert [r["title"] for r in rounds] == ["Virtual Coding Round", "Offline Final Round"]   # registration window left out
+    assert rounds[1]["start"] == "2026-10-09T04:00:00+00:00"   # 9 Oct, 9:30 am IST
+    # Unstop's top-level start_date is when registration opens (27 Sep), never the event start
+    assert comp["start_date"].startswith("2026-09-27") and rounds[0]["start"].startswith("2026-09-27")
+
+
+class FakeClient:
+    def __init__(self, detail):
+        self.detail, self.calls = detail, []
+
+    def get_json(self, url, params=None):
+        self.calls.append(url)
+        return self.detail
+
+
+def test_enrich_only_new_or_changed_and_respects_the_limit():
+    detail = load("unstop_detail_1762222.json")
+    events = [unstop.parse(r) for r in load("unstop_page1.json")["data"]["data"][:5]]
+    known = {events[0].source_event_id: events[0].listing_updated_at}   # this one's details are current
+    client = FakeClient(detail)
+    counts = unstop.enrich(client, events, known, limit=2)
+    assert counts == {"details_fetched": 2, "details_waiting": 2}
+    assert len(client.calls) == 2 and client.calls[0].endswith(f"/{events[1].source_event_id}")
+    assert events[0].detail_updated_at == events[0].listing_updated_at and events[0].rounds == []   # untouched
+    assert events[1].rounds and events[1].start_date is not None
+    assert events[3].detail_updated_at is None   # over the limit: fetched on a later run
+
+
+def test_enrich_drops_rounds_dated_after_the_event_ends():
+    # real case (29 Sep): an organizer's "MUST READ: Guidelines" notice was a round dated 2027
+    detail = {"data": {"competition": {"rounds": [{"round_order": 1, "details": [
+        {"title": "Idea Round", "start_date": "2026-10-10T10:00:00+05:30", "end_date": "2026-10-12T10:00:00+05:30"},
+        {"title": "MUST READ: Guidelines", "start_date": "2027-03-10T22:08:52+05:30", "end_date": "2027-03-26T10:08:52+05:30"}]}]}}}
+    e = unstop.parse(load("unstop_page1.json")["data"]["data"][0])
+    e.end_date = datetime(2026, 10, 30, 18, 29, tzinfo=timezone.utc)
+    unstop.enrich(FakeClient(detail), [e], {}, limit=5)
+    assert [r["title"] for r in e.rounds] == ["Idea Round"]
+    assert e.start_date == datetime(2026, 10, 10, 4, 30, tzinfo=timezone.utc)
