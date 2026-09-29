@@ -5,6 +5,9 @@ import { ToastProvider } from '../components/Toast';
 import { SessionProvider } from '../lib/session';
 import { useAppTheme } from '../theme';
 
+// Temporary boot marker (dev only): proves our JS started on the phone. Remove after step 25 is verified.
+if (__DEV__) console.log('[boot] app code started');
+
 // Navigation chrome takes our tokens too, so dark mode never flashes white between screens.
 export default function RootLayout() {
   const { scheme, colors } = useAppTheme();
