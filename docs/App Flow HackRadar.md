@@ -2,6 +2,13 @@
 
 Sep 27, 2026 · @Atul Sharma
 
+> **v2 (29 Sep 2026):** HackRadar is now a public app; see docs/PRD.md. Flows added on top of this
+> document: **Submit an event** (paste a link, fix the prefilled form, "Pending review" → "Live"),
+> **Report wrong info** (sheet on Event detail), **Account** (optional Google / email code when saving),
+> **Add to calendar** on Event detail. Changed: Event detail shows facts only (no copied "About" text);
+> onboarding fee choice is Free only / Free and paid; "Reinstalled app" (edge case 14) keeps saves if
+> the user signed in. Everything else below still holds.
+
 ## Overview
 
 The app has 3 bottom tabs (Feed, Saved, Settings), 2 extra screens (Event detail, Onboarding) and 1 bottom sheet (Filters); every path starts from one of 4 entry points.
