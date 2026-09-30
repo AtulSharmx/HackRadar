@@ -1,4 +1,4 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { useSession } from './session';
 import { supabase } from './supabase';
@@ -69,10 +69,19 @@ export function PrefsProvider({ children }) {
   const { user } = useSession();
   const [state, setState] = useState(read);
 
+  // upsert: right after a sign-in the account's devices row may not exist yet (an update would change nothing)
   const push = useCallback(async (prefs) => {
     if (!user || !prefs) return false;
-    const { error } = await supabase.from('devices').update(toDeviceRow(prefs)).eq('id', user.id);
+    const { error } = await supabase.from('devices').upsert({ id: user.id, ...toDeviceRow(prefs) }, { onConflict: 'id' });
     return !error;
+  }, [user]);
+
+  // signed in to another account, or logged out to a new guest: this phone's preferences go to that account
+  const owner = useRef(null);
+  useEffect(() => {
+    if (!user) return;
+    if (owner.current && owner.current !== user.id) setState((s) => (s.prefs ? { ...s, dirty: true } : s));
+    owner.current = user.id;
   }, [user]);
 
   // Offline when saving? Retry as soon as we have a session again.

@@ -74,6 +74,8 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 ## D. Accounts and settings
 
 - [ ] D1 Google sign-in and email code, linking the guest account (same user id, saves kept).
+  - 30 Sep: email code sign-in + log out built (app/src/app/account.js, lib/account.js). Needs the Supabase
+    email templates to show {{ .Token }} and, for the public, custom SMTP. Google sign-in still to do.
 - [ ] D2 Settings: preferences, location, notifications, hide warnings, privacy notice, Delete my data (in app + web URL).
   - Check: Delete my data removes server rows and returns to onboarding.
 
@@ -117,3 +119,6 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   - Apply on an Unstop event opens the Unstop app on its page when installed (unstop.com assetlinks names
     com.dare2compete.app); without it, a sheet offers the Play Store or the website. Coming back after 15 s or
     more shows a "Did you register?" popup (Registered, or x), with the real time away and the site.
+- 30 Sep 2026, app round 3 (user asks): light theme only (dark removed, so no theme switch delay or "match
+  device" issue); Settings redesigned with every choice in place (chips, and a sliding Segmented control for
+  mode, fee and distance, also used in Filters and onboarding); Account card with email-code sign-in and log out.

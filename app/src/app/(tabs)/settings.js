@@ -1,27 +1,30 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Constants from 'expo-constants';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Button from '../../components/Button';
 import Chip from '../../components/Chip';
 import CitySearch from '../../components/CitySearch';
-import { Group } from '../../components/OnboardingStep';
-import Sheet from '../../components/Sheet';
+import Segmented from '../../components/Segmented';
 import SwitchRow from '../../components/SwitchRow';
 import { useToast } from '../../components/Toast';
-import { DEGREES, THEME_NAMES, THEMES, yearOptions } from '../../lib/labels';
+import { explain, logOut } from '../../lib/account';
+import { select, success } from '../../lib/haptics';
+import { DEGREES, THEMES, yearOptions } from '../../lib/labels';
 import { askNotificationPermission } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
-import { select } from '../../lib/haptics';
+import { useSaved } from '../../lib/saved';
 import { useSession } from '../../lib/session';
-import { CHROME_MAX_SCALE, layout, radius, space, THEME_CHOICES, type, useAppTheme, useThemeChoice } from '../../theme';
+import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../../theme';
 
-// Same choices as onboarding
-const MODES = [['Online', ['online']], ['Offline', ['offline', 'hybrid']], ['Both', ['online', 'offline', 'hybrid']]];
-const FEES = [['Free only', 0], ['Free and paid', null]];
-const DISTANCES = [[10, '10 km'], [25, '25 km'], [50, '50 km'], [100, '100 km'], [null, 'Anywhere']];
+// Same choices as onboarding, shown in place: nothing opens from the bottom any more (user's ask, 30 Sep)
+const MODES = [['online', 'Online'], ['offline', 'Offline'], ['both', 'Both']];
+const MODE_LISTS = { online: ['online'], offline: ['offline', 'hybrid'], both: ['online', 'offline', 'hybrid'] };
+const FEES = [['free', 'Free only'], ['any', 'Free and paid']];
+const DISTANCES = [[10, '10'], [25, '25'], [50, '50'], [100, '100'], [null, 'Any']];
 const SOURCES = 'Unstop, Devfolio, Hack2Skill'; // collector/adapters, SOURCES in .github/workflows/collect.yml
 const same = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
@@ -31,66 +34,89 @@ function Section({ title, children, colors }) {
       <Text style={[type.meta, styles.sectionTitle, { color: colors.textSecondary }]} accessibilityRole="header">
         {title}
       </Text>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>{children}</View>
+      <Animated.View layout={LinearTransition.duration(motion.base)} style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {children}
+      </Animated.View>
     </View>
   );
 }
 
-// Brief: label left, current value right in secondary text, chevron when it opens something
-function Row({ label, value, onPress, colors, last }) {
-  const body = (
-    <>
-      <Text style={[type.body, styles.rowLabel, { color: colors.textPrimary }]}>{label}</Text>
-      <Text style={[type.body, styles.rowValue, { color: colors.textSecondary }]} numberOfLines={onPress ? 1 : 2}>{value}</Text>
-      {onPress ? <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textSecondary} /> : null}
-    </>
-  );
-  const style = [styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }];
-  return onPress ? (
-    <Pressable
-      onPress={() => {
-        select();
-        onPress();
-      }}
-      style={style}
-      android_ripple={{ color: colors.border }}
-      accessibilityRole="button"
-      accessibilityLabel={`${label}, ${value}`}
-    >
-      {body}
-    </Pressable>
-  ) : (
-    <View style={style} accessible accessibilityLabel={`${label}, ${value}`}>{body}</View>
+// A setting with its control right under the label
+function Item({ label, hint, children, colors, last }) {
+  return (
+    <View style={[styles.item, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+      <View style={styles.itemHead}>
+        <Text style={[type.label, { color: colors.textPrimary }]}>{label}</Text>
+        {hint ? <Text style={[type.meta, { color: colors.textSecondary }]}>{hint}</Text> : null}
+      </View>
+      {children}
+    </View>
   );
 }
 
-const SHEET_TITLES = {
-  themes: 'Interests', mode: 'Mode', fee: 'Fee', study: 'Degree and year', distance: 'How far can you travel?', look: 'Appearance',
-};
+function InfoRow({ label, value, colors, last }) {
+  return (
+    <View style={[styles.infoRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]} accessible accessibilityLabel={`${label}, ${value}`}>
+      <Text style={[type.body, { color: colors.textPrimary }]}>{label}</Text>
+      <Text style={[type.body, styles.infoValue, { color: colors.textSecondary }]}>{value}</Text>
+    </View>
+  );
+}
+
+function AccountCard({ colors, onLogOut, leaving }) {
+  const { user, error, retry, isGuest, email } = useSession();
+  if (!user) {
+    return (
+      <View style={[styles.account, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Text style={[type.body, { color: colors.textPrimary }]}>{error ? "Can't reach HackRadar. Check your connection." : 'Connecting…'}</Text>
+        {error ? <Button label="Retry" variant="secondary" onPress={retry} /> : null}
+      </View>
+    );
+  }
+  return (
+    <View style={[styles.account, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={styles.accountHead}>
+        <View style={[styles.avatar, { backgroundColor: colors.brandSoft }]}>
+          {isGuest ? (
+            <MaterialCommunityIcons name="account-outline" size={26} color={colors.brand} />
+          ) : (
+            <Text style={[type.cardTitle, { color: colors.brand }]}>{(email || '?')[0].toUpperCase()}</Text>
+          )}
+        </View>
+        <View style={styles.accountText}>
+          <Text style={[type.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>{isGuest ? 'Guest' : email}</Text>
+          <Text style={[type.meta, { color: colors.textSecondary }]}>
+            {isGuest ? 'Sign in to keep your saved hackathons on any phone.' : 'Signed in. Your saves and preferences sync to this account.'}
+          </Text>
+        </View>
+      </View>
+      {isGuest ? (
+        <Button label="Sign in or create account" onPress={() => router.push('/account')} />
+      ) : (
+        <Button label={leaving ? 'Logging out…' : 'Log out'} variant="secondary" onPress={onLogOut} disabled={leaving} />
+      )}
+    </View>
+  );
+}
 
 // App Flow "Settings flows": one scrolling list; every change saves at once (phone first, then the devices row).
 export default function SettingsScreen() {
   const { colors } = useAppTheme();
   const { prefs, save } = usePrefs();
-  const { user, error, retry } = useSession();
+  const saved = useSaved();
   const toast = useToast();
   const params = useLocalSearchParams();
-  const [open, setOpen] = useState(null); // key of SHEET_TITLES
-  const [lastThemeNote, setLastThemeNote] = useState(false);
   const [cityOpen, setCityOpen] = useState(false);
-  const { choice: look, setChoice: setLook } = useThemeChoice();
+  const [lastThemeNote, setLastThemeNote] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
-  // Feed's "Set city" opens the city picker straight away (a new "at" each time it's tapped)
+  // Feed's "Set city" opens the city search straight away (a new "at" each time it's tapped)
   useEffect(() => {
     if (params.open === 'city') setCityOpen(true);
   }, [params.open, params.at]);
 
   if (!prefs) return null; // onboarding not finished: this tab isn't reachable then
   const update = (patch) => save({ ...prefs, ...patch });
-  const close = () => {
-    setOpen(null);
-    setLastThemeNote(false);
-  };
 
   const themes = prefs.themes || [];
   const toggleTheme = (k) => {
@@ -98,15 +124,13 @@ export default function SettingsScreen() {
     setLastThemeNote(false);
     update({ themes: themes.includes(k) ? themes.filter((t) => t !== k) : [...themes, k] });
   };
-  const modeLabel = MODES.find(([, m]) => same(prefs.modes || [], m))?.[0] || 'Both';
-  const degree = DEGREES.find((d) => d.key === prefs.degree);
-  const studyLabel = degree ? [degree.label, prefs.year ? `Year ${prefs.year}` : null].filter(Boolean).join(', ') : 'Not set';
+  const modeKey = Object.keys(MODE_LISTS).find((k) => same(prefs.modes || [], MODE_LISTS[k])) || 'both';
+  const years = yearOptions(prefs.degree);
   const pickDegree = (key) => {
     const next = prefs.degree === key ? null : key;
     const stillValid = yearOptions(next).some(([y]) => y === prefs.year); // Year 4 doesn't exist for MCA
     update({ degree: next, year: stillValid ? prefs.year : null });
   };
-  const place = prefs.city ? [prefs.city, prefs.state].filter(Boolean).join(', ') : 'Not set';
 
   const setNotifications = async (on) => {
     if (!on) return update({ notifications: false });
@@ -117,101 +141,102 @@ export default function SettingsScreen() {
     }
   };
 
-  let account = 'Connecting…';
-  if (user) account = 'Guest';
-  else if (error) account = 'Offline';
-
-  const radio = (selected, label, onPress) => (
-    <Chip key={label} label={label} selected={selected} showRemove={false} role="radio" onPress={onPress} />
+  const confirmLogOut = () => Alert.alert(
+    'Log out?',
+    'Your saved hackathons stay in your account. On this phone you continue as a guest.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log out',
+        style: 'destructive',
+        onPress: async () => {
+          setLeaving(true);
+          try {
+            await saved.flush(); // unsent changes go to the account first
+            saved.clearLocal();
+            await logOut();
+            success();
+            toast('Logged out. You are a guest on this phone now.');
+          } catch (e) {
+            toast(explain(e));
+          } finally {
+            setLeaving(false);
+          }
+        },
+      },
+    ],
   );
-  const pickAndClose = (patch) => {
-    update(patch);
-    close();
-  };
 
-  let sheetBody = null;
-  if (open === 'themes') {
-    sheetBody = (
-      <Group label="Themes" note={lastThemeNote ? 'Keep at least one. Pick another before removing this one.' : 'Your Feed opens with these.'}>
-        {THEMES.map(([k, label]) => (
-          <Chip key={k} label={label} selected={themes.includes(k)} showRemove={false} onPress={() => toggleTheme(k)} />
-        ))}
-      </Group>
-    );
-  } else if (open === 'mode') {
-    sheetBody = (
-      <Group label="How do you want to join?" note={prefs.lat == null ? 'Until your city is set, the Feed shows online events.' : null}>
-        {MODES.map(([label, modes]) => radio(same(prefs.modes || [], modes), label, () => pickAndClose({ modes })))}
-      </Group>
-    );
-  } else if (open === 'fee') {
-    sheetBody = (
-      <Group label="Fee">
-        {FEES.map(([label, fee]) => radio((prefs.fee_max === 0 ? 0 : null) === fee, label, () => pickAndClose({ fee_max: fee })))}
-      </Group>
-    );
-  } else if (open === 'study') {
-    const years = yearOptions(prefs.degree);
-    sheetBody = (
-      <>
-        <Group label="Degree">{DEGREES.map((d) => radio(prefs.degree === d.key, d.label, () => pickDegree(d.key)))}</Group>
-        {years.length ? (
-          <Group label="Year">
-            {years.map(([y, label]) => radio(prefs.year === y, label, () => update({ year: prefs.year === y ? null : y })))}
-          </Group>
-        ) : null}
-      </>
-    );
-  } else if (open === 'look') {
-    sheetBody = (
-      <Group label="Theme" note={look === 'system' ? "Follows your phone's light or dark setting." : null}>
-        {THEME_CHOICES.map(([key, label]) => radio(look === key, label, () => {
-          setLook(key);
-          close();
-        }))}
-      </Group>
-    );
-  } else if (open === 'distance') {
-    sheetBody = (
-      <Group label="For offline events" note={prefs.lat == null ? 'Applies once your city is set.' : null}>
-        {DISTANCES.map(([km, label]) => radio(prefs.max_km === km, label, () => pickAndClose({ max_km: km })))}
-      </Group>
-    );
-  }
+  const chip = (selected, label, onPress, role = 'radio') => (
+    <Chip key={label} label={label} selected={selected} showRemove={false} role={role} onPress={onPress} />
+  );
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Section title="MY PREFERENCES" colors={colors}>
-          <Row label="Interests" value={themes.map((t) => THEME_NAMES[t]).join(', ') || 'Not set'} onPress={() => setOpen('themes')} colors={colors} />
-          <Row label="Mode" value={modeLabel} onPress={() => setOpen('mode')} colors={colors} />
-          <Row label="Fee" value={prefs.fee_max === 0 ? 'Free only' : 'Free and paid'} onPress={() => setOpen('fee')} colors={colors} />
-          <Row label="Degree and year" value={studyLabel} onPress={() => setOpen('study')} colors={colors} last />
+        <AccountCard colors={colors} onLogOut={confirmLogOut} leaving={leaving} />
+
+        <Section title="YOUR FEED" colors={colors}>
+          <Item
+            label="Interests"
+            hint={lastThemeNote ? 'Keep at least one. Pick another before removing this one.' : 'Your Feed opens with these.'}
+            colors={colors}
+          >
+            <View style={styles.chips}>
+              {THEMES.map(([k, label]) => chip(themes.includes(k), label, () => toggleTheme(k), 'checkbox'))}
+            </View>
+          </Item>
+          <Item label="How you want to join" hint={prefs.lat == null ? 'Until your city is set, the Feed shows online events.' : null} colors={colors}>
+            <Segmented options={MODES} value={modeKey} onChange={(k) => update({ modes: MODE_LISTS[k] })} accessibilityLabel="How you want to join" />
+          </Item>
+          <Item label="Fee" colors={colors} last>
+            <Segmented options={FEES} value={prefs.fee_max === 0 ? 'free' : 'any'} onChange={(k) => update({ fee_max: k === 'free' ? 0 : null })} accessibilityLabel="Fee" />
+          </Item>
         </Section>
 
         <Section title="LOCATION" colors={colors}>
-          <Row label="City" value={place} onPress={() => setCityOpen(true)} colors={colors} />
-          <Row
-            label="Travel distance"
-            value={DISTANCES.find(([km]) => km === prefs.max_km)?.[1] || 'Anywhere'}
-            onPress={() => setOpen('distance')}
-            colors={colors}
-            last
-          />
+          <Pressable
+            onPress={() => {
+              select();
+              setCityOpen(true);
+            }}
+            android_ripple={{ color: colors.border }}
+            style={[styles.cityRow, { borderBottomColor: colors.border }]}
+            accessibilityRole="button"
+            accessibilityLabel={prefs.city ? `City, ${prefs.city}. Change` : 'Set your city'}
+          >
+            <MaterialCommunityIcons name={prefs.city ? 'map-marker' : 'map-marker-plus-outline'} size={22} color={colors.brand} />
+            <View style={styles.cityText}>
+              <Text style={[type.body, { color: colors.textPrimary }]} numberOfLines={1}>{prefs.city || 'Set your city'}</Text>
+              <Text style={[type.meta, { color: colors.textSecondary }]} numberOfLines={1}>
+                {prefs.city ? prefs.state || 'India' : 'To see how far offline hackathons are'}
+              </Text>
+            </View>
+            <Text style={[type.label, { color: colors.brand }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{prefs.city ? 'Change' : 'Set'}</Text>
+          </Pressable>
+          <Item label="How far you can travel (km)" hint={prefs.lat == null ? 'Applies once your city is set.' : null} colors={colors} last>
+            <Segmented options={DISTANCES} value={prefs.max_km ?? null} onChange={(km) => update({ max_km: km })} accessibilityLabel="How far you can travel" />
+          </Item>
         </Section>
 
-        <Section title="APPEARANCE" colors={colors}>
-          <Row label="Theme" value={THEME_CHOICES.find(([k]) => k === look)?.[1]} onPress={() => setOpen('look')} colors={colors} last />
+        <Section title="YOUR STUDIES" colors={colors}>
+          <Item label="Degree" colors={colors} last={!years.length}>
+            <View style={styles.chips}>{DEGREES.map((d) => chip(prefs.degree === d.key, d.label, () => pickDegree(d.key)))}</View>
+          </Item>
+          {years.length ? (
+            <Animated.View entering={FadeIn.duration(motion.base)} exiting={FadeOut.duration(motion.fast)}>
+              <Item label="Year" colors={colors} last>
+                <View style={styles.chips}>
+                  {years.map(([y, label]) => chip(prefs.year === y, label, () => update({ year: prefs.year === y ? null : y })))}
+                </View>
+              </Item>
+            </Animated.View>
+          ) : null}
         </Section>
 
         <Section title="NOTIFICATIONS AND FEED" colors={colors}>
           <View style={styles.switches}>
-            <SwitchRow
-              label="Notifications"
-              hint="Reminders before saved deadlines"
-              value={!!prefs.notifications}
-              onChange={setNotifications}
-            />
+            <SwitchRow label="Notifications" hint="Reminders before saved deadlines" value={!!prefs.notifications} onChange={setNotifications} />
             <SwitchRow
               label="Hide events with warnings"
               hint="Flagged for a high fee with no prize, no organizer or odd dates"
@@ -222,20 +247,15 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title="ABOUT" colors={colors}>
-          <Row label="Hackathons from" value={SOURCES} colors={colors} />
-          <Row label="Account" value={account} colors={colors} />
-          <Row label="Version" value={Constants.expoConfig?.version || '1.0.0'} colors={colors} last />
+          <InfoRow label="Hackathons from" value={SOURCES} colors={colors} />
+          <InfoRow label="Version" value={Constants.expoConfig?.version || '1.0.0'} colors={colors} last />
         </Section>
-        {error && !user ? <Button label="Retry connection" variant="secondary" onPress={retry} style={styles.retry} /> : null}
 
         <Text style={[type.meta, styles.credit, { color: colors.textSecondary }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
           Place search by Photon (komoot) · City data © OpenStreetMap contributors
         </Text>
       </ScrollView>
 
-      <Sheet visible={!!open} onClose={close} title={SHEET_TITLES[open] || ''}>
-        {sheetBody}
-      </Sheet>
       <CitySearch
         visible={cityOpen}
         onClose={() => setCityOpen(false)}
@@ -259,11 +279,23 @@ const styles = StyleSheet.create({
   content: { padding: layout.screenPadding, paddingBottom: space.xxl, gap: space.xl },
   section: { gap: space.sm },
   sectionTitle: { letterSpacing: 0.5, paddingHorizontal: space.xs },
-  card: { borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 56 },
-  rowLabel: { flexShrink: 0 },
-  rowValue: { flex: 1, textAlign: 'right' },
-  switches: { paddingVertical: space.xs },
-  retry: { alignSelf: 'flex-start' },
+  card: { borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: layout.cardPadding, overflow: 'hidden' },
+  item: { paddingVertical: space.lg, gap: space.md },
+  itemHead: { gap: 2 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  cityRow: {
+    flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 64,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  cityText: { flex: 1 },
+  switches: { paddingVertical: space.sm },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 52, paddingVertical: space.sm },
+  infoValue: { flex: 1, textAlign: 'right' },
+  account: {
+    borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, padding: layout.cardPadding, gap: space.lg,
+  },
+  accountHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  accountText: { flex: 1, gap: 2 },
   credit: { textAlign: 'center' },
 });

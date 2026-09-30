@@ -4,16 +4,16 @@ import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import Button from '../../components/Button';
-import Chip from '../../components/Chip';
 import CitySearch from '../../components/CitySearch';
 import OnboardingStep, { Group } from '../../components/OnboardingStep';
+import Segmented from '../../components/Segmented';
 import { findCity } from '../../lib/cities';
 import { useDraft } from '../../lib/draft';
 import { success, warn } from '../../lib/haptics';
 import { locateMe } from '../../lib/places';
 import { layout, radius, space, type, useAppTheme } from '../../theme';
 
-const DISTANCES = [[10, '10 km'], [25, '25 km'], [50, '50 km'], [100, '100 km'], [null, 'Anywhere']];
+const DISTANCES = [[10, '10'], [25, '25'], [50, '50'], [100, '100'], [null, 'Any']];
 
 function Field({ label, value, onChangeText, autoComplete, textContentType, colors }) {
   return (
@@ -111,10 +111,8 @@ export default function LocationStep() {
         </View>
       ) : null}
 
-      <Group label="How far can you travel?">
-        {DISTANCES.map(([km, label]) => (
-          <Chip key={label} label={label} role="radio" showRemove={false} selected={draft.max_km === km} onPress={() => update({ max_km: km })} />
-        ))}
+      <Group label="How far can you travel? (km)">
+        <Segmented options={DISTANCES} value={draft.max_km ?? null} onChange={(km) => update({ max_km: km })} accessibilityLabel="How far can you travel" />
       </Group>
 
       <CitySearch

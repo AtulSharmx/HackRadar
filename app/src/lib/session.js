@@ -3,8 +3,16 @@ import { AppState } from 'react-native';
 
 import { supabase } from './supabase';
 
-// Guest first (docs/auth-plan.md): a silent anonymous sign-in gives a real user id,
-// and devices.id = that user id. Google / email linking comes later and keeps the same id.
+// Guest first (docs/auth-plan.md): a silent anonymous sign-in gives a real user id, and devices.id = that id.
+// Signing in with an email code (lib/account.js) keeps that id when the email is new, so nothing moves.
+
+// RLS lets a user insert only the row whose id is their own; an existing row is left untouched
+async function ensureDevice(user) {
+  const { error } = await supabase.from('devices').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
+  if (error) throw error;
+  return user;
+}
+
 export async function ensureGuest() {
   const {
     data: { session },
@@ -15,17 +23,16 @@ export async function ensureGuest() {
     if (error) throw error;
     user = data.user;
   }
-  // RLS lets a user insert only the row whose id is their own; existing row is left untouched
-  const { error } = await supabase.from('devices').upsert({ id: user.id }, { onConflict: 'id', ignoreDuplicates: true });
-  if (error) throw error;
-  return user;
+  return ensureDevice(user);
 }
 
-const SessionContext = createContext({ user: null, error: null, retry: () => {} });
+const SessionContext = createContext({ user: null, error: null, retry: () => {}, isGuest: true, email: null });
 
 export function useSession() {
   return useContext(SessionContext);
 }
+
+const sameUser = (a, b) => a?.id === b?.id && a?.email === b?.email && a?.is_anonymous === b?.is_anonymous;
 
 // Never blocks the UI: cached content can show while this runs; failures retry when the app comes back.
 export function SessionProvider({ children }) {
@@ -46,8 +53,28 @@ export function SessionProvider({ children }) {
     const sub = AppState.addEventListener('change', (s) => {
       if (s === 'active' && !ready.current) retry();
     });
-    return () => sub.remove();
+    // follow the account that is really signed in: email sign-in, email confirmed on the guest, log out
+    const { data: auth } = supabase.auth.onAuthStateChange((event, session) => {
+      // supabase-js: no awaited supabase calls inside this callback, so the follow-up work is deferred
+      setTimeout(() => {
+        if (event === 'SIGNED_OUT') {
+          ready.current = false;
+          setState({ user: null, error: null });
+          retry(); // back to a fresh guest
+          return;
+        }
+        const user = session?.user;
+        if (!user || !['SIGNED_IN', 'USER_UPDATED'].includes(event)) return;
+        setState((s) => (sameUser(s.user, user) ? s : { user, error: null }));
+        ensureDevice(user).catch(() => {});
+      }, 0);
+    });
+    return () => {
+      sub.remove();
+      auth.subscription.unsubscribe();
+    };
   }, [retry]);
 
-  return createElement(SessionContext.Provider, { value: { ...state, retry } }, children);
+  const value = { ...state, retry, isGuest: state.user ? !!state.user.is_anonymous : true, email: state.user?.email || null };
+  return createElement(SessionContext.Provider, { value }, children);
 }
