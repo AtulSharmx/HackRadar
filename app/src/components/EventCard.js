@@ -1,10 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import * as Haptics from 'expo-haptics';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
 import { ago, countdown, feeShort, prizeShort, whereShort } from '../lib/format';
+import { select, tap, thud } from '../lib/haptics';
 import { layout, motion, radius, space, type, useAppTheme } from '../theme';
 import PressableScale from './PressableScale';
 import { TRUST } from './TrustLabel';
@@ -32,7 +32,9 @@ function Bookmark({ saved, onToggle, title, colors }) {
         if (!saved) {
           // a small "pop" confirms the save; instant when animations are off (ReduceMotion.System)
           pop.value = withSequence(withSpring(1.25, motion.spring), withSpring(1, motion.spring));
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          thud();
+        } else {
+          select();
         }
         onToggle?.();
       }}
@@ -79,8 +81,14 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
 
   return (
     <PressableScale
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={() => {
+        tap();
+        onPress?.();
+      }}
+      onLongPress={onLongPress && (() => {
+        thud();
+        onLongPress();
+      })}
       accessibilityRole="button"
       accessibilityLabel={spoken}
       accessibilityHint="Opens details"

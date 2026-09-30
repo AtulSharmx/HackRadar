@@ -1,5 +1,6 @@
 // HackRadar design tokens. Source of truth: docs/UI UX Design Brief HackRadar.md.
 // Screens and components read everything from here. No hex values anywhere else.
+import { createContext, createElement, useCallback, useContext, useState } from 'react';
 import { Platform, useColorScheme } from 'react-native';
 
 const palette = {
@@ -84,8 +85,42 @@ function elevation(scheme) {
   };
 }
 
+// Appearance: 'light' (default: the user found the dark look "AI-made"), 'dark', or 'system' (follow the phone).
+// Kept on the phone only; it's a device setting, not a preference the server needs.
+const THEME_KEY = 'hackradar.theme.v1';
+export const THEME_CHOICES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'Match device']];
+const ThemeChoiceContext = createContext({ choice: 'light', setChoice: () => {} });
+
+function readChoice() {
+  try {
+    const v = globalThis.localStorage?.getItem(THEME_KEY);
+    return THEME_CHOICES.some(([k]) => k === v) ? v : 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+export function ThemeChoiceProvider({ children }) {
+  const [choice, setState] = useState(readChoice);
+  const setChoice = useCallback((next) => {
+    setState(next);
+    try {
+      globalThis.localStorage?.setItem(THEME_KEY, next);
+    } catch {
+      // still applies for this session
+    }
+  }, []);
+  return createElement(ThemeChoiceContext.Provider, { value: { choice, setChoice } }, children);
+}
+
+export function useThemeChoice() {
+  return useContext(ThemeChoiceContext);
+}
+
 export function useAppTheme() {
-  const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
+  const system = useColorScheme();
+  const { choice } = useContext(ThemeChoiceContext);
+  const scheme = choice === 'system' ? (system === 'dark' ? 'dark' : 'light') : choice;
   return { scheme, colors: palette[scheme], elevation: elevation(scheme) };
 }
 

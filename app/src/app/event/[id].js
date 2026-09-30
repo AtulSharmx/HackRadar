@@ -6,6 +6,8 @@ import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, Share, Sty
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
+import RegisterPrompt from '../../components/RegisterPrompt';
+import Sheet from '../../components/Sheet';
 import { useToast, useToastLift } from '../../components/Toast';
 import TrustLabel from '../../components/TrustLabel';
 import { loadCache } from '../../lib/feed';
@@ -13,13 +15,16 @@ import {
   ago, countdown, dateRange, dateTime, feeLong, hostOf, joinAnd, prizeLong, safeUrl, teamSize, whereShort,
 } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
+import { success } from '../../lib/haptics';
 import { MODE_NAMES, THEME_NAMES } from '../../lib/labels';
+import { appFor, openInApp, openStore } from '../../lib/openRegistration';
 import { usePrefs } from '../../lib/prefs';
 import { useSaved } from '../../lib/saved';
 import { supabase } from '../../lib/supabase';
 import { useSaveToggle } from '../../lib/useSaveToggle';
 import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../../theme';
 
+const AWAY_TO_ASK = 15000; // back sooner than 15 s from the registration page: they didn't register, don't ask
 const SOURCE_NAMES = { unstop: 'Unstop', devfolio: 'Devfolio', hack2skill: 'Hack2Skill', devpost: 'Devpost', manual: 'HackRadar' };
 
 // Feed cache first (instant, offline), then my saved copy (a saved event that already left the feed),
@@ -89,8 +94,10 @@ export default function EventDetail() {
   const toggleSave = useSaveToggle();
   const toast = useToast();
   useToastLift(36); // above the Apply bar
-  const askLater = useRef(null); // "Did you register?" waits for the return from the browser
+  const askLater = useRef(null); // "Did you register?" waits for the return from the browser or app
   useEffect(() => () => askLater.current?.remove(), []);
+  const [needsApp, setNeedsApp] = useState(null); // the platform app, when it isn't on this phone
+  const [prompt, setPrompt] = useState(null); // { where, minutes } while "Did you register?" is up
 
   if (!event) {
     return (
@@ -135,29 +142,55 @@ export default function EventDetail() {
   const myStatus = saved.statusOf(event.id); // 'interested' | 'registered' | null
   const setMyStatus = (next) => {
     saved.setStatus(event.id, next);
+    if (next === 'registered') success();
     toast(next === 'registered' ? 'Moved to Registered.' : 'Moved to Interested.');
   };
 
-  // App Flow: after coming back from the registration page, offer to mark it Registered
-  const apply = async () => {
-    const res = await WebBrowser.openBrowserAsync(event.registration_url, { toolbarColor: colors.surface, controlsColor: colors.brand });
-    if (saved.statusOf(event.id) === 'registered') return;
-    const ask = () => toast('Did you register?', {
-      duration: 8000,
-      action: {
-        label: 'Yes',
-        onPress: () => (saved.isSaved(event.id) ? saved.setStatus(event.id, 'registered') : saved.save(event, 'registered')),
-      },
-    });
-    if (res.type !== 'opened') return ask(); // iOS: resolves when the browser closes
-    // Android resolves as soon as the browser opens; asking now would expire before the user is back
+  // App Flow: back from the registration page (browser or app) after a real stay, ask with a popup
+  const ask = (awayMs, where) => {
+    if (awayMs < AWAY_TO_ASK || saved.statusOf(event.id) === 'registered') return;
+    setPrompt({ where, minutes: Math.floor(awayMs / 60000) });
+  };
+  const markRegistered = () => {
+    success();
+    if (saved.isSaved(event.id)) saved.setStatus(event.id, 'registered');
+    else saved.save(event, 'registered');
+    setPrompt(null);
+    toast('Moved to Registered.');
+  };
+  // Android hands the page to another task and returns at once, so time the stay with the app's own state:
+  // it goes to the background (recent apps) while the page is open, and comes back when the user does
+  const askWhenBack = (where) => {
     askLater.current?.remove();
+    let leftAt = AppState.currentState !== 'active' ? Date.now() : null;
     askLater.current = AppState.addEventListener('change', (s) => {
-      if (s !== 'active') return;
+      if (s !== 'active') {
+        leftAt = leftAt ?? Date.now();
+        return;
+      }
+      if (leftAt == null) return;
       askLater.current?.remove();
       askLater.current = null;
-      ask();
+      ask(Date.now() - leftAt, where);
     });
+  };
+  const openWebsite = async () => {
+    const started = Date.now();
+    const res = await WebBrowser.openBrowserAsync(event.registration_url, { toolbarColor: colors.surface, controlsColor: colors.brand });
+    if (res.type !== 'opened') ask(Date.now() - started, host); // iOS: resolves when the browser closes
+    else askWhenBack(host);
+  };
+  // Unstop events open in the Unstop app when it's installed (straight to this event's page);
+  // without the app: get it from the Play Store, or register on the website
+  const app = appFor(event.registration_url);
+  const apply = async () => {
+    if (!app) return openWebsite();
+    const started = Date.now();
+    const result = await openInApp(event.registration_url, app);
+    if (result === 'missing') return setNeedsApp(app);
+    const where = `the ${app.name} app`;
+    if (Date.now() - started > 3000) ask(Date.now() - started, where); // the call waited until the user came back
+    else askWhenBack(where);
   };
   const isSaved = !!myStatus;
   const share = () => Share.share({
@@ -303,7 +336,7 @@ export default function EventDetail() {
       >
         {linkOk && !closed ? (
           <Text style={[type.meta, styles.opens, { color: colors.textSecondary }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-            Opens {host}
+            {app ? `Opens the ${app.name} app or ${host}` : `Opens ${host}`}
           </Text>
         ) : null}
         <View style={styles.barRow}>
@@ -319,6 +352,39 @@ export default function EventDetail() {
           <Button label={applyLabel} onPress={apply} disabled={closed || !linkOk} style={styles.applyBtn} />
         </View>
       </View>
+
+      <RegisterPrompt
+        visible={!!prompt}
+        title={event.title}
+        where={prompt?.where || host}
+        minutes={prompt?.minutes ?? 0}
+        onRegistered={markRegistered}
+        onClose={() => setPrompt(null)}
+      />
+      <Sheet visible={!!needsApp} onClose={() => setNeedsApp(null)} title={`Register with the ${app?.name || ''} app`}>
+        <Text style={[type.body, { color: colors.textPrimary }]}>
+          The {app?.name} app isn't on this phone. Get it from the Play Store to register in the app, or
+          register on the website instead.
+        </Text>
+        <View style={styles.appChoices}>
+          <Button
+            label={`Get the ${app?.name || ''} app`}
+            onPress={() => {
+              const target = needsApp;
+              setNeedsApp(null);
+              openStore(target);
+            }}
+          />
+          <Button
+            label="Continue on the website"
+            variant="secondary"
+            onPress={() => {
+              setNeedsApp(null);
+              openWebsite();
+            }}
+          />
+        </View>
+      </Sheet>
     </View>
   );
 }
@@ -354,4 +420,5 @@ const styles = StyleSheet.create({
   barRow: { flexDirection: 'row', gap: space.sm },
   saveBtn: { width: 56, minHeight: layout.minTouch, borderWidth: 1.5, borderRadius: radius.button, alignItems: 'center', justifyContent: 'center' },
   applyBtn: { flex: 1 },
+  appChoices: { gap: space.sm },
 });

@@ -1,4 +1,4 @@
-import { activeChips, applyView, defaultFilters, FEE_CHOICES, feeChoice } from '../feedView';
+import { activeChips, applyView, clearedFilters, defaultFilters, FEE_CHOICES, feeChoice, pageOf } from '../feedView';
 
 const NOW = new Date('2026-09-29T06:30:00Z');
 const PREFS = { themes: ['ai_ml'], modes: ['online', 'offline', 'hybrid'], fee_max: null, max_km: 50, hide_warnings: false, lat: 28.46, lng: 77.03 };
@@ -70,4 +70,18 @@ test('chips: one per active filter, each removable', () => {
   expect(feeChoice(paid[0].clear(FEE_CHOICES.paid))).toBe('both');
   expect(activeChips({ ...defaultFilters(PREFS), themes: [] }, true).map((c) => c.label)).toEqual(['Within 50 km']);
   expect(activeChips({ ...defaultFilters(PREFS), themes: [] }, false)).toEqual([]); // no location: km chip means nothing
+});
+
+test('Clear removes every filter: all open hackathons, no chips', () => {
+  const all = applyView(E, { filters: clearedFilters(), sort: 'closing', prefs: PREFS, now: NOW });
+  expect(ids(all).sort()).toEqual(['a', 'b', 'c', 'd']); // 'e' has no deadline, so Closing soonest leaves it out
+  expect(activeChips(clearedFilters(), true)).toEqual([]);
+});
+
+test('pages of 10, clamped to the pages that exist', () => {
+  const list = Array.from({ length: 23 }, (_, i) => i);
+  expect(pageOf(list, 1)).toEqual({ items: list.slice(0, 10), page: 1, pages: 3 });
+  expect(pageOf(list, 3).items).toEqual([20, 21, 22]);
+  expect(pageOf(list, 9).page).toBe(3); // filters shrank the list under the page I was on
+  expect(pageOf([], 1)).toEqual({ items: [], page: 1, pages: 1 });
 });

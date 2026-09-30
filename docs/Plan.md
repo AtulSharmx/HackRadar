@@ -106,3 +106,14 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     = the collector's last visit (event_sources.last_seen_at, 4 columns readable) instead of last change.
   - Saved: copies refresh from the server on every sync (closed/changed events), and a save or remove made
     during a sync is no longer undone by it. Switches were invisible in dark mode when off.
+- 30 Sep 2026, app round 2 (user asks):
+  - Light theme by default (the dark look felt "AI-made"); Settings > Appearance: Light / Dark / Match device.
+  - Haptics through lib/haptics.js on buttons, chips, tabs, sort, switches, pages, save, swipe; tab "shift"
+    animation, detail slides in, feed cards fade up, chips and saved rows glide instead of jumping.
+  - Feed shows 10 per page with "< Page 2 of 25 >"; Filters "Reset" is now "Clear" (no filters at all).
+  - Location: full-screen search with suggestions under the box (the keyboard hid them before), real places
+    as you type from Photon (komoot, OpenStreetMap, no key), phone list offline; GPS names the city through
+    Photon's reverse lookup, then the phone, then the nearest listed city.
+  - Apply on an Unstop event opens the Unstop app on its page when installed (unstop.com assetlinks names
+    com.dare2compete.app); without it, a sheet offers the Play Store or the website. Coming back after 15 s or
+    more shows a "Did you register?" popup (Registered, or x), with the real time away and the site.

@@ -6,7 +6,7 @@ import { ToastProvider } from '../components/Toast';
 import { PrefsProvider, usePrefs } from '../lib/prefs';
 import { SavedProvider } from '../lib/saved';
 import { SessionProvider } from '../lib/session';
-import { useAppTheme } from '../theme';
+import { ThemeChoiceProvider, useAppTheme } from '../theme';
 
 // Onboarding until my preferences exist, then the app. Protected routes swap them; no conditional renders in screens.
 function Routes() {
@@ -23,6 +23,7 @@ function Routes() {
           name="event/[id]"
           options={{
             title: '',
+            animation: 'slide_from_right',
             headerStyle: { backgroundColor: colors.background },
             headerShadowVisible: false,
             headerTintColor: colors.textPrimary,
@@ -33,8 +34,8 @@ function Routes() {
   );
 }
 
-// Navigation chrome takes our tokens too, so dark mode never flashes white between screens.
-export default function RootLayout() {
+// Navigation chrome takes our tokens too, so the theme never flashes the other colour between screens.
+function ThemedApp() {
   const { scheme, colors } = useAppTheme();
   const nav = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const theme = {
@@ -50,7 +51,7 @@ export default function RootLayout() {
     },
   };
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <ThemeProvider value={theme}>
         <SessionProvider>
           <PrefsProvider>
@@ -64,5 +65,13 @@ export default function RootLayout() {
         </SessionProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemeChoiceProvider>
+      <ThemedApp />
+    </ThemeChoiceProvider>
   );
 }

@@ -3,15 +3,17 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Button from '../../components/Button';
 import EventCard from '../../components/EventCard';
 import Sheet from '../../components/Sheet';
 import { useToast } from '../../components/Toast';
 import { distanceKm } from '../../lib/geo';
+import { select, success, thud } from '../../lib/haptics';
 import { usePrefs } from '../../lib/prefs';
 import { useSaved } from '../../lib/saved';
-import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../../theme';
+import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../../theme';
 
 function Segments({ value, onChange, counts, colors }) {
   const seg = (key, label) => {
@@ -19,7 +21,10 @@ function Segments({ value, onChange, counts, colors }) {
     return (
       <Pressable
         key={key}
-        onPress={() => onChange(key)}
+        onPress={() => {
+          if (!on) select();
+          onChange(key);
+        }}
         style={[styles.seg, on && { backgroundColor: colors.surface, borderColor: colors.border }]}
         accessibilityRole="tab"
         accessibilityState={{ selected: on }}
@@ -76,19 +81,27 @@ export default function SavedScreen() {
         onLongPress={() => setMenuFor(entry)}
       />
     );
+    // removed rows fade out and the rest glide up, instead of jumping
     return (
-      <View key={entry.id} style={styles.rowGap}>
+      <Animated.View
+        key={entry.id}
+        style={styles.rowGap}
+        entering={FadeIn.duration(motion.base)}
+        exiting={FadeOut.duration(motion.fast)}
+        layout={LinearTransition.duration(motion.base)}
+      >
         {swipe ? (
           <ReanimatedSwipeable
             friction={2}
             rightThreshold={60}
             overshootRight={false}
+            onSwipeableWillOpen={() => thud()}
             renderRightActions={() => <RemoveAction onPress={() => remove(entry.id)} colors={colors} />}
           >
             {card}
           </ReanimatedSwipeable>
         ) : card}
-      </View>
+      </Animated.View>
     );
   };
 
@@ -115,7 +128,10 @@ export default function SavedScreen() {
         {s.past.length ? (
           <View style={styles.past}>
             <Pressable
-              onPress={() => setShowPast((v) => !v)}
+              onPress={() => {
+                select();
+                setShowPast((v) => !v);
+              }}
               style={styles.pastHeader}
               accessibilityRole="button"
               accessibilityState={{ expanded: showPast }}
@@ -132,7 +148,7 @@ export default function SavedScreen() {
       <Sheet visible={!!menuFor} onClose={() => setMenuFor(null)} title={menuFor?.event?.title || 'Saved event'}>
         <View>
           {menuFor?.status === 'interested' ? (
-            <Button label="Mark as Registered" variant="text" onPress={() => { saved.setStatus(menuFor.id, 'registered'); setMenuFor(null); toast('Moved to Registered.'); }} />
+            <Button label="Mark as Registered" variant="text" onPress={() => { success(); saved.setStatus(menuFor.id, 'registered'); setMenuFor(null); toast('Moved to Registered.'); }} />
           ) : (
             <Button label="Move back to Interested" variant="text" onPress={() => { saved.setStatus(menuFor.id, 'interested'); setMenuFor(null); toast('Moved to Interested.'); }} />
           )}
