@@ -6,6 +6,7 @@ Send these from your own email, fill in the [brackets], and keep the replies in 
 Status:
 - Unstop: not sent yet
 - Devpost: not sent yet (find the right address on Devpost's Help / Contact page; not confirmed here)
+- Devnovate: not sent yet; its adapter is not built until they say yes (Terms: "You must not modify or copy the materials")
 
 ---
 
@@ -57,4 +58,26 @@ Is there an official feed, API or partner programme I should use instead? If the
 I'll keep Devpost out of the app.
 
 Thanks for your time,
+[your name]
+
+---
+
+## To Devnovate (info.devnovate@gmail.com, address from devnovate.co)
+
+**Subject:** Permission to list Devnovate hackathons in a free student app
+
+Hi Devnovate team,
+
+I'm [your name], a [year] [degree] student at [college], [city]. I'm building HackRadar, a free
+Android app that helps Indian students find hackathons they can join, near them or online, and
+reminds them before deadlines.
+
+Your Terms say the materials on your site must not be copied, so I'm asking before showing any
+Devnovate events. If you allow it, the app would show only the title, organiser, dates, mode,
+city, fee and a link; every event opens on Devnovate and registration stays with you. It would
+refresh at most once every 6 hours with a named User-Agent, and never copy descriptions or images.
+
+Is that okay, or is there a feed or format you'd prefer? If not, I'll keep Devnovate out.
+
+Thanks,
 [your name]

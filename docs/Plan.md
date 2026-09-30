@@ -34,8 +34,15 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     (events.source_verified) and replaces the organizer check in trust rules. Fee unknown → "Check details".
   - fetch_url_post allows one exact URL and a fixed body shape only. Dedupe: one online + one offline now
     scores 15 lower (two false review items on 30 Sep).
-- [ ] A5 Terms check, then Hack2Skill and Devnovate adapters.
-  - Check: each adds events; no duplicates; health alerts per source.
+- [x] A5 Terms check, then Hack2Skill and Devnovate adapters.
+  - Check: each adds events; no duplicates; health alerts per source. Result 30 Sep: Hack2Skill listed 18,
+    6 open and joinable (online/hybrid), all new, 0 merged, 0 duplicates; health checks run per source name.
+  - Terms: Hack2Skill has no clause against automated access (robots.txt allows) → added. Devnovate's Terms say
+    "must not copy the materials" → not built; permission draft in docs/outreach.md.
+  - Hack2Skill's list has no city, organizer or paid-fee amount; none invented. FLAGSHIP events are run by
+    Hack2Skill itself (stored as source_verified); COMMUNITY events keep the "no organizer" warning. In-person
+    events are left out unless the title names an Indian city (location unknown, may be abroad). Homepage promo
+    rows that point back at a listed event are dropped.
 - [ ] A6 Per-field source precedence in merge (deadline from where registration happens).
   - Check: a test where Devfolio and Unstop disagree picks the right one.
 - [ ] A7 App shows facts only: remove the verbatim "About" block from detail.
