@@ -59,3 +59,10 @@ def test_merge_prefers_detail_and_unions_themes():
     assert m["title"] == "X Hack 2026" and m["city"] == "Pune" and m["fee_amount"] == 0
     assert m["themes"] == ["ai_ml"]
     assert d.merge([thin], stored)["city"] == "Old City"   # a missing field never wipes a known one
+
+
+def test_online_vs_offline_with_similar_titles_is_not_even_a_review():
+    # real pair from 30 Sep: flagged at 84 before the mode penalty
+    a = row("Grand Innovation Challenge", "Digdoh", mode="offline")
+    b = row("Graphiques Innovation Challenge", None, mode="online")
+    assert d.score(a, b) < d.REVIEW_AT

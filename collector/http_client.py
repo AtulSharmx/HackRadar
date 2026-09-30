@@ -76,14 +76,32 @@ class Client:
         # ponytail: urllib's parser ignores "*" wildcards inside paths; fine for our two sources
         return self._robots[host].can_fetch(config.USER_AGENT, url)
 
+    def _post(self, url: str, body: dict):
+        if not self.via_supabase:
+            return self.http.post(url, json=body)
+        key = config.SUPABASE_SERVICE_ROLE_KEY
+        r = httpx.post(f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/rpc/fetch_url_post", timeout=40,
+                       headers={"apikey": key, "Authorization": f"Bearer {key}"},
+                       json={"url": url, "body": body, "user_agent": config.USER_AGENT})
+        r.raise_for_status()
+        row = r.json()[0]
+        return _Resp(row["status"], row["content_type"], row["body_text"] or "")
+
     def get_json(self, url: str, params=None):
+        return self._json(url, lambda: self._get(url, params=params))
+
+    def post_json(self, url: str, body: dict):
+        """For search APIs that only take POST (Devfolio). Same robots check, delays and block handling."""
+        return self._json(url, lambda: self._post(url, body))
+
+    def _json(self, url: str, send):
         if not self._allowed(url):
             raise Blocked(f"robots.txt disallows {url}")
         host = urlsplit(url).netloc
         for attempt in range(len(RETRY_WAITS) + 1):
             self._wait(host)
             try:
-                r = self._get(url, params=params)
+                r = send()
             except httpx.TransportError:
                 if attempt == len(RETRY_WAITS):
                     raise

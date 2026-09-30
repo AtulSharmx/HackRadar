@@ -27,8 +27,13 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     A2's open question. Open-theme hackathons are "Open innovation" instead of "other". Description text counts
     only with unambiguous phrases ("machine learning", not "AI-powered"). Structured eligibility: not started;
     Unstop only gives category names ("Engineering Students"), which eligibility_text already shows.
-- [ ] A4 Devfolio adapter (fetch_url POST variant, fixture, tests).
-  - Check: 25+ Devfolio events live; duplicates with Unstop merged.
+- [x] A4 Devfolio adapter (fetch_url_post, fixture, tests).
+  - Check: 25+ Devfolio events live; duplicates with Unstop merged. Result 30 Sep: Devfolio had 25 open,
+    23 relevant (1 abroad offline, 1 not relevant), 22 new + 1 merged with Unstop (Algothon'26). Feed: 226.
+  - Devfolio gives no organizer name and no prize amounts; neither is invented. Its "verified" flag is stored
+    (events.source_verified) and replaces the organizer check in trust rules. Fee unknown → "Check details".
+  - fetch_url_post allows one exact URL and a fixed body shape only. Dedupe: one online + one offline now
+    scores 15 lower (two false review items on 30 Sep).
 - [ ] A5 Terms check, then Hack2Skill and Devnovate adapters.
   - Check: each adds events; no duplicates; health alerts per source.
 - [ ] A6 Per-field source precedence in merge (deadline from where registration happens).

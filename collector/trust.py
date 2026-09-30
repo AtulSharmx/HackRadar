@@ -30,7 +30,8 @@ def red_flags(row: dict, by_source: dict[str, dict]) -> list[dict]:
     if fee is not None and fee > config.FEE_LIMIT and not has_reward:
         flags.append({"code": "high_fee", "text": f"Fee is ₹{fee:,} per team and no prize is listed"})
 
-    if not (row.get("organizer") or "").strip():
+    # a platform-verified listing (Devfolio) without an organizer name is not a red flag
+    if not (row.get("organizer") or "").strip() and not row.get("source_verified"):
         flags.append({"code": "no_organizer", "text": "Organizer is not mentioned"})
 
     deadlines = {s: _dt(r["registration_deadline"]) for s, r in by_source.items() if r.get("registration_deadline")}
@@ -63,6 +64,6 @@ def label(row: dict, flags: list[dict], sources, now: datetime | None = None) ->
     if (not deadline or not row.get("mode") or row.get("fee_amount") is None
             or (offline and not row.get("city"))):
         return "check_details"
-    if set(sources) & set(config.TRUSTED_SOURCES) and row.get("organizer") and row.get("registration_url"):
+    if set(sources) & set(config.TRUSTED_SOURCES) and (row.get("organizer") or row.get("source_verified")) and row.get("registration_url"):
         return "trusted_source"
     return "check_details"

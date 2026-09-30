@@ -73,6 +73,8 @@ def score(a: dict, b: dict) -> int:
         s += 10
     elif ca and cb:   # both venues known and different: almost always two separate events
         s -= 20
+    if {a.get("mode"), b.get("mode")} == {"online", "offline"}:   # one online, one in person (hybrid is compatible)
+        s -= 15
     if a.get("organizer") and b.get("organizer") and fuzz.token_set_ratio(
             a["organizer"].lower(), b["organizer"].lower()) >= 85:
         s += 10
