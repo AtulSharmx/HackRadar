@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Button from '../../components/Button';
@@ -53,7 +53,8 @@ function Item({ label, hint, children, colors, last }) {
 }
 
 function AccountCard({ colors, onLogOut, leaving }) {
-  const { user, error, retry, isGuest, email } = useSession();
+  const { user, error, retry, isGuest, email, phone, name, avatar } = useSession();
+  const handle = email || phone; // how they sign in
   if (!user) {
     return (
       <View style={[styles.account, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -69,13 +70,17 @@ function AccountCard({ colors, onLogOut, leaving }) {
           {isGuest ? (
             <MaterialCommunityIcons name="account-outline" size={26} color={colors.brand} />
           ) : (
-            <Text style={[type.cardTitle, { color: colors.brand }]}>{(email || '?')[0].toUpperCase()}</Text>
+            avatar ? (
+              <Image source={{ uri: avatar }} style={styles.avatarImg} accessibilityIgnoresInvertColors />
+            ) : (
+              <Text style={[type.cardTitle, { color: colors.brand }]}>{(name || handle || '?')[0].toUpperCase()}</Text>
+            )
           )}
         </View>
         <View style={styles.accountText}>
-          <Text style={[type.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>{isGuest ? 'Guest' : email}</Text>
+          <Text style={[type.cardTitle, { color: colors.textPrimary }]} numberOfLines={1}>{isGuest ? 'Guest' : name || handle}</Text>
           <Text style={[type.meta, { color: colors.textSecondary }]}>
-            {isGuest ? 'Sign in to keep your saved hackathons on any phone.' : 'Signed in. Your saves and preferences sync to this account.'}
+            {isGuest ? 'Sign in to keep your saved hackathons on any phone.' : `${name && handle ? `${handle} · ` : ''}Your saves and preferences sync to this account.`}
           </Text>
         </View>
       </View>
@@ -292,6 +297,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, padding: layout.cardPadding, gap: space.lg,
   },
   accountHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarImg: { width: 48, height: 48 },
   accountText: { flex: 1, gap: 2 },
 });

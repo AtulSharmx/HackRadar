@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.hackradar.app",
       "adaptiveIcon": {
         "backgroundColor": "#F7F8FA",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,6 +28,13 @@
       "expo-web-browser",
       "expo-asset"
     ],
-    "scheme": "hackradar"
+    "scheme": "hackradar",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b41f7f97-2db0-4a5d-b90f-47254ece664d"
+      }
+    },
+    "owner": "atulshxrma"
   }
 }

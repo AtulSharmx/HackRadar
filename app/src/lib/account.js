@@ -2,6 +2,7 @@
 // A guest who signs in keeps their user id when the email/phone/Google account is new (it is attached to
 // the guest), so saves and preferences simply stay. If it already belongs to an account, that account is
 // signed in and this phone's saves are uploaded to it (lib/saved.js). docs/auth-plan.md
+import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -9,6 +10,9 @@ import { supabase } from './supabase';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Google Cloud "Web application" OAuth client id (public, not a secret): native Google sign-in asks Google
+// for an ID token addressed to it, and Supabase's Google provider lists the same id
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
 export const RESEND_AFTER = 30; // seconds before "Resend code" works again
 export const CODE_LENGTH = 6;
@@ -83,9 +87,38 @@ async function browserRound(request, redirect) {
   return result.type === 'success' ? paramsOf(result.url) : null; // null: the user closed the browser
 }
 
-// Google or GitHub in the browser, back to the app with a one-time code.
-// Resolves with the signed-in user, or null when the user closed the browser.
+// The phone's own Google account picker: only in a development/store build (Expo Go has no native module)
+function nativeGoogle() {
+  if (Constants.executionEnvironment === 'storeClient' || !GOOGLE_WEB_CLIENT_ID) return null;
+  try {
+    return require('@react-native-google-signin/google-signin'); // eslint-disable-line global-require
+  } catch {
+    return null;
+  }
+}
+
+async function signInWithGoogleNative({ GoogleSignin, isSuccessResponse }) {
+  GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  await GoogleSignin.signOut().catch(() => {}); // always show the picker, never reuse the last account silently
+  const res = await GoogleSignin.signIn();
+  if (!isSuccessResponse(res)) return null; // picker closed
+  const token = res.data.idToken;
+  if ((await currentUser())?.is_anonymous) {
+    const { data, error } = await supabase.auth.linkIdentity({ provider: 'google', token });
+    if (!error) return data.user;
+    if (!already(error)) throw error;
+  }
+  const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'google', token });
+  if (error) throw error;
+  return data.user;
+}
+
+// Google (native picker when the build has it) or GitHub/Google in the browser, back with a one-time code.
+// Resolves with the signed-in user, or null when the user closed the picker or browser.
 export async function signInWithProvider(provider) {
+  const native = provider === 'google' ? nativeGoogle() : null;
+  if (native) return signInWithGoogleNative(native);
   const redirectTo = Linking.createURL('auth-callback');
   const options = { redirectTo, skipBrowserRedirect: true };
   let p;
