@@ -11,11 +11,22 @@ import PressableScale from '../components/PressableScale';
 import RadarPing from '../components/RadarPing';
 import {
   CODE_LENGTH, explain, fullPhone, getProviders, isEmail, isIndianMobile, phoneDigits, RESEND_AFTER,
-  savedPrefsOf, sendCode, signInWithProvider, verifyCode,
+  detailOf, savedPrefsOf, sendCode, signInWithProvider, verifyCode,
 } from '../lib/account';
 import { select, success, tap, warn } from '../lib/haptics';
 import { usePrefs } from '../lib/prefs';
 import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../theme';
+
+// the plain message, and the server's own words small under it (so a failure can be traced)
+function ErrorText({ error, detail, colors, center }) {
+  if (!error) return null;
+  return (
+    <View style={styles.errorBox} accessibilityRole="alert">
+      <Text style={[type.body, center && styles.center, { color: colors.urgent }]}>{error}</Text>
+      {detail ? <Text style={[type.meta, center && styles.center, { color: colors.textSecondary }]}>Details: {detail}</Text> : null}
+    </View>
+  );
+}
 
 const enter = FadeInRight.duration(motion.max);
 const leave = FadeOutLeft.duration(motion.fast);
@@ -59,7 +70,13 @@ export default function AccountScreen() {
   const [codeState, setCodeState] = useState('idle'); // idle | error | done
   const [mode, setMode] = useState(null); // 'link' | 'signin' (lib/account.sendCode)
   const [busy, setBusy] = useState(null); // what is working: 'google' | 'github' | 'send' | 'verify'
-  const [error, setError] = useState(null);
+  const [error, setErrorText] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const setError = (text, raw = null) => {
+    setErrorText(text);
+    setDetail(text ? detailOf(raw) : null);
+  };
+  const working = useRef(false); // one sign-in at a time, however fast the taps
   const [note, setNote] = useState(null);
   const [wait, setWait] = useState(0);
   const [providers, setProviders] = useState({ email: true });
@@ -111,11 +128,13 @@ export default function AccountScreen() {
   };
 
   const oauth = async (provider, name) => {
+    if (working.current) return;
     if (!providers[provider]) {
       warn();
       setNote(`${name} sign-in is almost ready. Use email for now.`);
       return;
     }
+    working.current = true;
     setBusy(provider);
     setError(null);
     try {
@@ -123,8 +142,9 @@ export default function AccountScreen() {
       if (user) await finish(user);
     } catch (e) {
       warn();
-      setError(explain(e, name));
+      setError(explain(e, name), e);
     } finally {
+      working.current = false;
       setBusy(null);
     }
   };
@@ -141,7 +161,7 @@ export default function AccountScreen() {
       go('code');
     } catch (e) {
       warn();
-      setError(explain(e, via === 'phone' ? 'Phone' : 'Email'));
+      setError(explain(e, via === 'phone' ? 'Phone' : 'Email'), e);
     } finally {
       setBusy(null);
     }
@@ -159,7 +179,7 @@ export default function AccountScreen() {
       warn();
       setCodeState('error');
       codeRef.current?.shake();
-      setError(explain(e));
+      setError(explain(e), e);
     } finally {
       setBusy(null);
     }
@@ -205,7 +225,7 @@ export default function AccountScreen() {
           <Method icon="email-outline" label="Continue with email" onPress={() => { tap(); go('email'); }} ready colors={colors} delay={210} />
         </View>
         {note ? <Animated.Text entering={FadeIn} style={[type.body, styles.center, { color: colors.soon }]}>{note}</Animated.Text> : null}
-        {error ? <Text style={[type.body, styles.center, { color: colors.urgent }]} accessibilityRole="alert">{error}</Text> : null}
+        <ErrorText error={error} detail={detail} colors={colors} center />
         <Text style={[type.meta, styles.center, { color: colors.textSecondary }]}>
           No password needed. We use your email or number only to sign you in.
         </Text>
@@ -232,7 +252,7 @@ export default function AccountScreen() {
           style={field}
           accessibilityLabel="Email"
         />
-        {error ? <Text style={[type.body, { color: colors.urgent }]} accessibilityRole="alert">{error}</Text> : null}
+        <ErrorText error={error} detail={detail} colors={colors} />
         <Button label={busy === 'send' ? 'Sending…' : 'Send code'} onPress={() => send('email')} disabled={!!busy || !isEmail(email)} />
       </Animated.View>
     );
@@ -261,7 +281,7 @@ export default function AccountScreen() {
             accessibilityLabel="Mobile number"
           />
         </View>
-        {error ? <Text style={[type.body, { color: colors.urgent }]} accessibilityRole="alert">{error}</Text> : null}
+        <ErrorText error={error} detail={detail} colors={colors} />
         <Button label={busy === 'send' ? 'Sending…' : 'Send code'} onPress={() => send('phone')} disabled={!!busy || !isIndianMobile(phone)} />
       </Animated.View>
     );
@@ -281,7 +301,7 @@ export default function AccountScreen() {
           length={CODE_LENGTH}
           state={codeState}
         />
-        {error ? <Text style={[type.body, { color: colors.urgent }]} accessibilityRole="alert">{error}</Text> : null}
+        <ErrorText error={error} detail={detail} colors={colors} />
         <Button label={busy === 'verify' ? 'Checking…' : 'Verify'} onPress={() => verify()} disabled={!!busy || code.length < CODE_LENGTH} />
         <View style={styles.links}>
           <Button label={channel === 'phone' ? 'Change number' : 'Change email'} variant="text" onPress={() => go(channel)} />
@@ -362,6 +382,7 @@ const styles = StyleSheet.create({
   prefix: { borderWidth: 1, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md, justifyContent: 'center' },
   phoneInput: { flex: 1, letterSpacing: 1 },
   links: { flexDirection: 'row', justifyContent: 'space-between' },
+  errorBox: { gap: 2 },
   done: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, paddingBottom: 80 },
   tick: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center' },
 });
