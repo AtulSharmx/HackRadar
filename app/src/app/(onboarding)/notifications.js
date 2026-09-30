@@ -20,9 +20,10 @@ export default function NotificationsStep() {
   const { draft } = useDraft();
   const { save } = usePrefs();
 
-  // No city -> online only until a city is set (App Flow, step 4 skip rule)
+  // No city: the Feed shows online events until one is set (feedView.defaultFilters), and the mode picked
+  // in step 3 is kept for when it is
   const finish = (notifications) => {
-    save({ ...draft, notifications, modes: draft.city ? draft.modes : ['online'] });
+    save({ ...draft, notifications });
     router.replace('/');
   };
 

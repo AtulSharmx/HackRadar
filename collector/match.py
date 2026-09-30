@@ -4,7 +4,10 @@ The app will implement the same rules in JS; both must pass shared/match_cases.j
 
 Rules not spelled out in the TRD, decided here:
 - Unknown data never excludes an event (unknown fee passes fee_max), EXCEPT for filters the user
-  made narrow on purpose: solo_only and closing_within_days need a known value.
+  made narrow on purpose: solo_only, paid_only and closing_within_days need a known value.
+- Fee: fee_max 0 = "Free" (drops events known to charge, even when the amount isn't listed);
+  paid_only = "Paid" (only events known to charge). Neither = both.
+- closing_within_days counts calendar days in India, the same days the app's countdown shows.
 - Hybrid events can be joined online, so the distance filter doesn't apply to them.
 - Offline event with no coordinates (or no device location) fails max_km: we can't claim it's near.
 """
@@ -13,6 +16,7 @@ from datetime import datetime, timezone
 
 from . import config
 from .geocode import haversine_km
+from .normalize import IST
 
 W_THEME, W_DISTANCE, W_FEE, W_URGENCY, W_TRUST = 35, 25, 15, 15, 10
 FEE_PARTIAL = 8
@@ -45,6 +49,18 @@ def days_left(event: dict, now: datetime) -> float | None:
     return (d - now).total_seconds() / 86400 if d else None
 
 
+def calendar_days_left(event: dict, now: datetime) -> int | None:
+    """Days between today and the deadline day, both in IST. 0 = closes today (the app's countdown)."""
+    d = _dt(event.get("registration_deadline"))
+    return (d.astimezone(IST).date() - now.astimezone(IST).date()).days if d else None
+
+
+def is_paid(event: dict) -> bool | None:
+    """True/False when known: a listed amount, else the source's own paid flag. None = unknown."""
+    fee = event.get("fee_amount")
+    return fee > 0 if fee is not None else event.get("is_paid")
+
+
 def matches(event: dict, device: dict, now: datetime | None = None) -> bool:
     now = now or datetime.now(timezone.utc)
     f = filter_of(device)
@@ -55,14 +71,17 @@ def matches(event: dict, device: dict, now: datetime | None = None) -> bool:
         return False
     if f.get("modes") and event.get("mode") and event["mode"] not in f["modes"]:
         return False
-    fee = event.get("fee_amount")
-    if f.get("fee_max") is not None and fee is not None and fee > f["fee_max"]:
+    fee, paid = event.get("fee_amount"), is_paid(event)
+    if f.get("fee_max") is not None and (fee > f["fee_max"] if fee is not None else paid and f["fee_max"] == 0):
+        return False
+    if f.get("paid_only") and paid is not True:
         return False
     if f.get("max_km") is not None and event.get("mode") == "offline":
         km = distance_km(event, device)
         if km is None or km > f["max_km"]:
             return False
-    if f.get("closing_within_days") is not None and (left is None or left > f["closing_within_days"]):
+    if f.get("closing_within_days") is not None and (
+            left is None or calendar_days_left(event, now) > f["closing_within_days"]):
         return False
     if f.get("solo_only") and event.get("solo_allowed") is not True:
         return False

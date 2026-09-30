@@ -50,6 +50,9 @@ def test_unstop_fixture():
     assert e.registration_url.startswith("https://unstop.com/")
     paid = next(x for x in events if x.title == "National Young Programmers Olympiad")
     assert paid.fee_amount == 499 and paid.prize_amount_inr == 1_000_000
+    assert e.to_row()["is_paid"] is False and paid.to_row()["is_paid"] is True
+    # "Newest" uses Unstop's publish time ("2026-09-28 22:35:36 GMT+0530" is India time)
+    assert e.posted_at == datetime(2026, 9, 28, 17, 5, 36, tzinfo=timezone.utc)
 
 
 def test_rows_fit_table():
@@ -120,6 +123,8 @@ def test_devfolio_fixture():
     assert kol.mode == "offline" and kol.city == "Kolkata" and kol.in_india and kol.source_verified
     assert kol.registration_url.startswith("https://") and kol.organizer is None   # never invented
     assert kol.registration_deadline is not None and kol.start_date is not None
+    assert kol.posted_at is not None and kol.posted_at < kol.registration_deadline   # applications opened
+    assert kol.fee_amount is None and kol.to_row()["is_paid"] is None   # Devfolio lists no fee either way
     assert all(e.themes for e in events.values())
     abroad = [e for e in events.values() if e.mode == "offline" and not e.in_india]
     assert abroad and not any(devfolio.is_relevant(e) for e in abroad)   # the German one stays out
@@ -148,6 +153,8 @@ def test_hack2skill_fixture():
     assert e.registration_url == e.source_url and e.source_url.startswith("https://hack2skill.com/event/")
     assert e.organizer is None and e.city is None   # the list has neither; never invented
     assert events["ImpactX'26"].fee_amount is None      # PAID without an amount
+    assert events["ImpactX'26"].to_row()["is_paid"] is True and e.to_row()["is_paid"] is False
+    assert e.posted_at == datetime(2026, 4, 1, 8, 30, tzinfo=timezone.utc)   # registrationStart
     assert e.source_verified and not events["ImpactX'26"].source_verified   # FLAGSHIP vs COMMUNITY
     assert events["IBM Z Datathon 2026"].mode == "hybrid" and events["IBM Z Datathon 2026"].team_max is None
     # in person with no city in the title: location unknown (could be abroad), so left out

@@ -66,6 +66,48 @@
       "name": "deadline already passed",
       "event": {"mode": "online", "themes": ["ai_ml"], "fee_amount": 0, "registration_deadline": "2026-09-28T06:30:00+00:00", "trust_label": "trusted_source"},
       "expect": {"matches": false, "score": 85, "why": "35 + 25 + 15 + 0 (passed) + 10"}
+    },
+    {
+      "name": "Paid filter keeps an event with a listed fee",
+      "device": {"alert_filter": {"paid_only": true}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": 300, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": true, "score": 58, "why": "0 (theme) + 25 + 8 (fee <= 500) + 15 + 10"}
+    },
+    {
+      "name": "Paid filter drops a free event",
+      "device": {"alert_filter": {"paid_only": true}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": false, "score": 65, "why": "0 + 25 + 15 + 15 + 10"}
+    },
+    {
+      "name": "Paid filter drops an event whose fee isn't listed",
+      "device": {"alert_filter": {"paid_only": true}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": null, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": false, "score": 50, "why": "0 + 25 + 0 (fee unknown) + 15 + 10"}
+    },
+    {
+      "name": "source says paid but gives no amount: shown under Paid",
+      "device": {"alert_filter": {"paid_only": true}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": null, "is_paid": true, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": true, "score": 50, "why": "0 + 25 + 0 (amount unknown) + 15 + 10"}
+    },
+    {
+      "name": "source says paid but gives no amount: hidden under Free",
+      "device": {"alert_filter": {"fee_max": 0}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": null, "is_paid": true, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": false, "score": 50, "why": "0 + 25 + 0 (amount unknown) + 15 + 10"}
+    },
+    {
+      "name": "closing within 7 days counts India calendar days, like the countdown (7.5 days away = '7 days left')",
+      "device": {"alert_filter": {"closing_within_days": 7}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-06T18:29:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": true, "score": 65, "why": "0 + 25 + 15 + 15 (7.5 days) + 10"}
+    },
+    {
+      "name": "closing within 7 days drops '8 days left'",
+      "device": {"alert_filter": {"closing_within_days": 7}},
+      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-07T18:29:00+00:00", "trust_label": "trusted_source"},
+      "expect": {"matches": false, "score": 65, "why": "0 + 25 + 15 + 15 (8.5 days) + 10"}
     }
   ]
 }

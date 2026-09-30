@@ -44,6 +44,8 @@ def test_deadline_without_time_is_2359_ist():
     assert parse_date("Oct 23, 2026", deadline=True) == datetime(2026, 10, 23, 18, 29, tzinfo=timezone.utc)
     assert parse_date("2026-10-04T19:59:00+05:30") == datetime(2026, 10, 4, 14, 29, tzinfo=timezone.utc)
     assert parse_date("not a date") is None
+    # Unstop's approved_date: "GMT+0530" is India time, not UTC-5:30 (dateutil's POSIX reading)
+    assert parse_date("2026-09-28 22:35:36 GMT+0530") == datetime(2026, 9, 28, 17, 5, 36, tzinfo=timezone.utc)
 
 
 def test_themes():

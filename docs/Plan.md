@@ -45,7 +45,7 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     rows that point back at a listed event are dropped.
 - [ ] A6 Per-field source precedence in merge (deadline from where registration happens).
   - Check: a test where Devfolio and Unstop disagree picks the right one.
-- [ ] A7 App shows facts only: remove the verbatim "About" block from detail.
+- [x] A7 App shows facts only: remove the verbatim "About" block from detail. Done 30 Sep in the app bug round (below).
 - [ ] A8 Weekly jobs: quality report on Telegram (per source, per field), retention cleanup, pg_dump backup.
   - Check: Monday's report arrives; backup artifact exists.
 - [ ] A9 Send permission emails (docs/outreach.md), add Devfolio, Hack2Skill, Devnovate as courtesy.
@@ -88,3 +88,21 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 
 ## Progress log
 - 29 Sep 2026: v2 docs written; collector moved to fetch-through-Supabase; Devpost off pending permission.
+- 30 Sep 2026, app bug round (user report: fee filter, sort):
+  - Feed: the filter-chip row took half the screen (a horizontal ScrollView grows by default); lists now
+    start at the top after a sort/filter/search change; "Set city" on the banner and in both sheets.
+  - Fee filter is Free / Paid / Both. Free = not known to charge (a "Fee not listed" event still shows, with
+    that label); Paid = known to charge. New events.is_paid keeps "paid, amount not listed" (Hack2Skill PAID,
+    Unstop isPaid) out of Free. Same rule in collector/match.py and app match.js (shared cases 12-18).
+  - Newest sorts by events.posted_at (Unstop approved_date, Devfolio/Hack2Skill registration start), not
+    first_seen_at, which made every event of a newly added source look new; cards show "Posted 3 h ago".
+    Fixed on the way: "GMT+0530" dates were read as UTC-5:30 (dateutil), 11 h off.
+  - "Closing within 7 days" counts India calendar days like the countdown (a "7 days left" card was dropped).
+  - Settings tab built (preferences, city, distance, notifications, hide warnings, about); the app pointed
+    people to it from 4 places while it was a placeholder. Delete my data stays in D2.
+  - Event detail: "Did you register?" now waits for the return from the browser (Android resolved at once,
+    so it expired unseen); "I registered" / "Move to Interested" on the page; offline shows "can't load",
+    not "no longer listed"; one prize line; venue without the repeated city; distance from me; "Checked"
+    = the collector's last visit (event_sources.last_seen_at, 4 columns readable) instead of last change.
+  - Saved: copies refresh from the server on every sync (closed/changed events), and a save or remove made
+    during a sync is no longer undone by it. Switches were invisible in dark mode when off.

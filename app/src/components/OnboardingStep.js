@@ -49,13 +49,14 @@ export default function OnboardingStep({ step, title, subtitle, children, next, 
   );
 }
 
-// A labelled group of options inside a step ("Fee", "Degree", ...)
-export function Group({ label, children }) {
+// A labelled group of options inside a step ("Fee", "Degree", ...), with an optional line under it
+export function Group({ label, note, children }) {
   const { colors } = useAppTheme();
   return (
     <View style={styles.group}>
       <Text style={[type.label, { color: colors.textPrimary }]}>{label}</Text>
       <View style={styles.options}>{children}</View>
+      {note ? <Text style={[type.meta, { color: colors.textSecondary }]}>{note}</Text> : null}
     </View>
   );
 }

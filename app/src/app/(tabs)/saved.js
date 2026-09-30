@@ -95,7 +95,7 @@ export default function SavedScreen() {
   const list = s[tab];
   const empty = tab === 'interested'
     ? { text: 'Nothing saved yet. Tap the bookmark on any hackathon to keep it here.', action: 'Browse hackathons' }
-    : { text: 'After you sign up for an event, mark it Registered and it moves here.', action: null };
+    : { text: 'Registered for a saved event? Tap "I registered" on its page and it moves here.', action: null };
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>

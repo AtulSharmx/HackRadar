@@ -11,18 +11,32 @@ export const SORTS = [
   ['prize', 'Highest prize'],
 ];
 
+const ALL_MODES = ['online', 'offline', 'hybrid'];
+
 // Feed opens with my onboarding answers applied (App Flow: onboarding Finish)
 export function defaultFilters(prefs) {
+  const located = prefs?.lat != null;
   return {
     themes: prefs?.themes || [],
-    modes: prefs?.modes || ['online', 'offline', 'hybrid'],
-    fee_max: prefs?.fee_max ?? null,
-    max_km: prefs?.max_km ?? null,
+    // no location yet: online only until a city is set (App Flow, onboarding step 4), not saved as a choice
+    modes: located ? prefs?.modes || ALL_MODES : ['online'],
+    fee_max: prefs?.fee_max === 0 ? 0 : null, // onboarding asks Free only / Free and paid
+    paid_only: false,
+    // a distance means nothing without my location; applied anyway it would hide every offline event
+    max_km: located ? prefs?.max_km ?? null : null,
     closing_within_days: null,
     solo_only: false,
     exclude_warnings: !!prefs?.hide_warnings,
   };
 }
+
+// Fee filter as one choice: 'free' | 'paid' | 'both', and back
+export const feeChoice = (f) => (f.paid_only ? 'paid' : f.fee_max === 0 ? 'free' : 'both');
+export const FEE_CHOICES = {
+  free: { fee_max: 0, paid_only: false },
+  paid: { fee_max: null, paid_only: true },
+  both: { fee_max: null, paid_only: false },
+};
 
 // The device-row shape match.js expects
 export function asDevice(prefs, filters) {
@@ -34,8 +48,6 @@ export function asDevice(prefs, filters) {
   };
 }
 
-const ALL_MODES = ['online', 'offline', 'hybrid'];
-
 // One removable chip per active filter: [{ key, label, clear(filters) -> filters }]
 export function activeChips(f, hasLocation) {
   const chips = [];
@@ -46,7 +58,9 @@ export function activeChips(f, hasLocation) {
   if (f.modes?.length && f.modes.length < ALL_MODES.length) {
     chips.push({ key: 'modes', label: f.modes.includes('online') ? 'Online only' : 'Offline and hybrid', clear: (x) => ({ ...x, modes: ALL_MODES }) });
   }
-  if (f.fee_max === 0) chips.push({ key: 'fee', label: 'Free', clear: (x) => ({ ...x, fee_max: null }) });
+  if (feeChoice(f) !== 'both') {
+    chips.push({ key: 'fee', label: feeChoice(f) === 'free' ? 'Free' : 'Paid', clear: (x) => ({ ...x, ...FEE_CHOICES.both }) });
+  }
   if (f.max_km != null && hasLocation && (!f.modes?.length || f.modes.includes('offline'))) {
     chips.push({ key: 'km', label: `Within ${f.max_km} km`, clear: (x) => ({ ...x, max_km: null }) });
   }
@@ -83,7 +97,9 @@ export function applyView(events, { query = '', filters, sort = 'best', prefs, n
   } else if (sort === 'closing') {
     list = list.filter((e) => e.registration_deadline).sort(byDeadline); // unknown deadlines excluded (App Flow)
   } else if (sort === 'newest') {
-    list = [...list].sort((a, b) => (b.first_seen_at || '').localeCompare(a.first_seen_at || ''));
+    // when the source published it; first_seen_at only says when HackRadar found it
+    const posted = (e) => Date.parse(e.posted_at || e.first_seen_at) || 0;
+    list = [...list].sort((a, b) => posted(b) - posted(a) || byDeadline(a, b));
   } else if (sort === 'nearest') {
     list = [...list].sort((a, b) => km(a) - km(b) || byDeadline(a, b));
   } else if (sort === 'prize') {

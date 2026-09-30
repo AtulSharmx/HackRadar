@@ -67,10 +67,12 @@ def parse(raw: dict) -> Event:
         team_max=tmax if tmax and tmin and tmax >= tmin else None,
         solo_allowed=(tmin == 1) if tmin else None,
         fee_amount=_fee(raw),
+        is_paid=raw["isPaid"] if isinstance(raw.get("isPaid"), bool) else None,
         prize_text=prize_text,
         prize_amount_inr=prize,
         eligibility_text=strip_html(", ".join(f["name"] for f in raw.get("filters") or []
                                               if f.get("type") == "eligible"), 300),
+        posted_at=parse_date(raw.get("approved_date")),   # when Unstop published it; their own list is newest-first by it
         listing_updated_at=raw.get("updated_at"),
     )
 

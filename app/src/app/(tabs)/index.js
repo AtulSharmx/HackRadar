@@ -12,7 +12,7 @@ import EventCard from '../../components/EventCard';
 import FilterSheet from '../../components/FilterSheet';
 import SkeletonCard from '../../components/SkeletonCard';
 import SortSheet from '../../components/SortSheet';
-import { useToast } from '../../components/Toast';
+import { useToast, useToastLift } from '../../components/Toast';
 import { activeChips, applyView, defaultFilters, SORTS } from '../../lib/feedView';
 import { ago } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
@@ -57,13 +57,32 @@ export default function FeedScreen() {
   const [query, setQuery] = useState('');
   const [sheet, setSheet] = useState(null); // 'filters' | 'sort' | null
   useEffect(() => setFilters(defaults), [defaults]); // prefs changed in Settings -> new defaults
+  useToastLift(64); // toasts sit above the floating Filters bar
 
   const shown = useMemo(() => applyView(events, { query, filters, sort, prefs }), [events, query, filters, sort, prefs]);
   const chips = activeChips(filters, !!me);
+  const openCity = () => {
+    setSheet(null);
+    router.navigate({ pathname: '/settings', params: { open: 'city', at: String(Date.now()) } });
+  };
 
   // Floating "Filters · Sort" bar hides while scrolling down, returns on scroll up (animated on the UI thread)
   const hidden = useSharedValue(0);
   const lastY = useRef(0);
+  const listRef = useRef(null);
+
+  // A new sort, filter or search starts the list from the top, with the bar back in view; otherwise the
+  // reordered list shows some random middle part and a short list could leave the bar hidden for good.
+  const firstView = useRef(true);
+  useEffect(() => {
+    if (firstView.current) {
+      firstView.current = false;
+      return;
+    }
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    lastY.current = 0;
+    hidden.value = withTiming(0, { duration: motion.base });
+  }, [sort, filters, query, hidden]);
   const barStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: hidden.value * 120 }],
     opacity: 1 - hidden.value,
@@ -120,7 +139,13 @@ export default function FeedScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {error ? <Banner icon="wifi-off" text={`Offline. Showing events from ${ago(fetchedAt)}.`} /> : null}
-      {!me && !error ? <Banner icon="map-marker-off-outline" text="Set your city to see how far offline hackathons are." /> : null}
+      {!me && !error ? (
+        <Banner
+          icon="map-marker-off-outline"
+          text="Showing online hackathons. Set your city to see offline ones near you."
+          action={{ label: 'Set city', onPress: openCity }}
+        />
+      ) : null}
 
       <View style={styles.searchWrap}>
         <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -145,7 +170,7 @@ export default function FeedScreen() {
       </View>
 
       {chips.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsBar} contentContainerStyle={styles.chips}>
           {chips.map((c) => (
             <Chip key={c.key} label={c.label} selected onPress={() => setFilters(c.clear(filters))} />
           ))}
@@ -153,6 +178,7 @@ export default function FeedScreen() {
       ) : null}
 
       <FlashList
+        ref={listRef}
         data={shown}
         keyExtractor={(e) => e.id}
         renderItem={({ item }) => (
@@ -162,9 +188,10 @@ export default function FeedScreen() {
             saved={saved.isSaved(item.id)}
             onToggleSave={() => toggleSave(item)}
             onPress={() => router.push(`/event/${item.id}`)}
+            posted={sort === 'newest' ? item.posted_at || item.first_seen_at : null}
           />
         )}
-        extraData={[me, saved.entries]}
+        extraData={[me, saved.entries, sort]}
         onScroll={onScroll}
         scrollEventThrottle={16}
         keyboardDismissMode="on-drag"
@@ -229,6 +256,7 @@ export default function FeedScreen() {
           setSheet(null);
         }}
         onSaveAlert={saveAlert}
+        onSetCity={openCity}
         events={events}
         query={query}
         sort={sort}
@@ -239,6 +267,7 @@ export default function FeedScreen() {
         onClose={() => setSheet(null)}
         sort={sort}
         hasLocation={!!me}
+        onSetCity={openCity}
         onPick={(s) => {
           setSort(s);
           setSheet(null);
@@ -259,6 +288,8 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, paddingVertical: space.sm },
   clear: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
+  // a horizontal ScrollView grows to fill free height by default, which pushed the list half down the screen
+  chipsBar: { flexGrow: 0, flexShrink: 0 },
   chips: { paddingHorizontal: layout.screenPadding, paddingTop: space.md, gap: space.sm },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xxl, gap: space.md },
   centerText: { textAlign: 'center' },

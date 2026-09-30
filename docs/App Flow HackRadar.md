@@ -8,6 +8,11 @@ Sep 27, 2026 · @Atul Sharma
 > **Add to calendar** on Event detail. Changed: Event detail shows facts only (no copied "About" text);
 > onboarding fee choice is Free only / Free and paid; "Reinstalled app" (edge case 14) keeps saves if
 > the user signed in. Everything else below still holds.
+>
+> **30 Sep 2026:** Filters sheet fee choice is **Free / Paid / Both** (Free also shows events that don't list
+> a fee, labelled "Fee not listed"; Paid shows only events known to charge). **Newest** means newest on the
+> source (its publish or registration-open date), and cards show "Posted 3 h ago" while it is chosen.
+> "Closing within 7 days" counts calendar days in India, like the countdown.
 
 ## Overview
 
