@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from collector.adapters import devpost, unstop
+from collector.adapters import devpost, hack2skill, unstop
 
 FIX = Path(__file__).parent / "fixtures"
 
@@ -132,3 +132,24 @@ def test_verified_listing_without_organizer_is_not_a_warning():
     assert "no_organizer" not in [f["code"] for f in trust.red_flags(row, {"devfolio": row})]
     unverified = {**row, "source_verified": False}
     assert "no_organizer" in [f["code"] for f in trust.red_flags(unverified, {"devfolio": unverified})]
+
+
+def test_hack2skill_fixture():
+    rows = load("hack2skill_list.json")["data"]
+    events = {r.get("eventUrl") or r["link"]: hack2skill.parse(r) for r in rows}
+    assert len(events) == 18
+    # the "Builders' Pitch Fest" promo row links back to bitsom-pitchfest2026, which is already listed
+    assert [r["title"] for r in rows if r.get("link") and hack2skill._link_slug(r) in
+            {x["eventUrl"] for x in rows if x.get("eventUrl")}] == ["Builders' Pitch Fest 2026"]
+    assert events["https://aibuildercup.com/"].source_url == "https://aibuildercup.com/"
+    events = {e.title: e for k, e in events.items() if "hack2skill.com/event/" in e.source_url}
+    e = events["Virtual: PromptWars"]
+    assert e.mode == "online" and e.fee_amount == 0 and e.solo_allowed and e.team_max == 1
+    assert e.registration_url == e.source_url and e.source_url.startswith("https://hack2skill.com/event/")
+    assert e.organizer is None and e.city is None   # the list has neither; never invented
+    assert events["ImpactX'26"].fee_amount is None      # PAID without an amount
+    assert e.source_verified and not events["ImpactX'26"].source_verified   # FLAGSHIP vs COMMUNITY
+    assert events["IBM Z Datathon 2026"].mode == "hybrid" and events["IBM Z Datathon 2026"].team_max is None
+    # in person with no city in the title: location unknown (could be abroad), so left out
+    assert not hack2skill.is_relevant(events["Build with AI: PromptWars"].__class__(
+        **{**events["Build with AI: PromptWars"].__dict__, "registration_deadline": None}))
