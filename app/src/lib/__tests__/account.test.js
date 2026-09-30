@@ -1,5 +1,5 @@
 jest.mock('../supabase', () => ({ supabase: {} }));
-jest.mock('expo-linking', () => ({ createURL: () => 'hackradar://auth-callback' }));
+jest.mock('expo-linking', () => ({ createURL: () => 'hackradar://auth-callback', addEventListener: () => ({ remove() {} }) }));
 jest.mock('expo-web-browser', () => ({}));
 
 import { explain, fullPhone, isEmail, isIndianMobile, paramsOf } from '../account';
