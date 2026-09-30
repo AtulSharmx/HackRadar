@@ -53,7 +53,9 @@ export async function syncEvents(supabase, cache, now = new Date()) {
   for (let from = 0; ; from += PAGE) {
     let q = supabase.from('events').select('*');
     q = cache.lastSync ? q.gt('updated_at', cache.lastSync) : q.eq('status', 'open');
-    const { data, error } = await q.order('updated_at', { ascending: true }).range(from, from + PAGE - 1);
+    // id breaks ties: the collector writes many rows with one timestamp, and paging over an unstable
+    // order can skip or repeat rows between pages
+    const { data, error } = await q.order('updated_at', { ascending: true }).order('id', { ascending: true }).range(from, from + PAGE - 1);
     if (error) throw error;
     next = mergeRows(next, data, now.toISOString());
     if (data.length < PAGE) return next;

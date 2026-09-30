@@ -93,10 +93,12 @@ export function SavedProvider({ children }) {
     setState(next);
   }, []);
 
-  // Push pending changes, then pull anything saved on the server but missing here (e.g. after login on a new phone)
+  // Push pending changes, pull anything saved on the server but missing here (e.g. after login on a new
+  // phone), and refresh every saved event's copy, so one that closed or moved its deadline shows that.
   const sync = useCallback(async () => {
     if (!user || busy.current) return;
     busy.current = true;
+    let again = false;
     try {
       const { entries, pending } = stateRef.current;
       const done = [];
@@ -111,23 +113,33 @@ export function SavedProvider({ children }) {
         if (!error || error.code === '23503') done.push(id); // 23503: event deleted on the server, nothing to keep
       }
       const { data: rows } = await supabase.from('saved_events').select('event_id,status,saved_at').eq('device_id', user.id);
-      const cur = stateRef.current;
-      const missing = (rows || []).filter((r) => !cur.entries[r.event_id] && !cur.pending[r.event_id]);
+      const seen = stateRef.current;
+      const missing = (rows || []).filter((r) => !seen.entries[r.event_id] && !seen.pending[r.event_id]);
+      const ids = [...new Set([...Object.keys(seen.entries), ...missing.map((r) => r.event_id)])];
       let events = {};
-      if (missing.length) {
-        const { data } = await supabase.from('events').select('*').in('id', missing.map((r) => r.event_id));
+      if (ids.length) {
+        const { data } = await supabase.from('events').select('*').in('id', ids);
         events = Object.fromEntries((data || []).map((e) => [e.id, e]));
       }
+      // build on the latest state: a save or remove made while the requests ran must not be undone
+      const cur = stateRef.current;
       const entries2 = { ...cur.entries };
-      for (const r of missing) entries2[r.event_id] = { status: r.status, saved_at: r.saved_at, event: events[r.event_id] || null };
+      for (const r of missing) {
+        if (!cur.entries[r.event_id] && !cur.pending[r.event_id]) {
+          entries2[r.event_id] = { status: r.status, saved_at: r.saved_at, event: events[r.event_id] || null };
+        }
+      }
       const pending2 = { ...cur.pending };
       for (const id of done) if (pending2[id] === pending[id]) delete pending2[id];
-      commit({ entries: entries2, pending: pending2 });
+      commit(refreshSnapshots({ entries: entries2, pending: pending2 }, events));
+      // a change made while this ran is still pending: send it now, not at the next app open
+      again = Object.entries(pending2).some(([id, token]) => pending[id] !== token);
     } catch {
       // offline: pending stays, next sync retries
     } finally {
       busy.current = false;
     }
+    if (again) sync();
   }, [user, commit]);
 
   useEffect(() => {

@@ -21,7 +21,9 @@ def _when(v) -> str:
 
 def _fee(e) -> str:
     fee = e.get("fee_amount")
-    return "Free" if fee == 0 else "Fee not listed" if fee is None else f"Fee ₹{fee:,}"
+    if fee is None:
+        return "Paid, fee amount not listed" if e.get("is_paid") else "Fee not listed"
+    return "Free" if fee == 0 else f"Fee ₹{fee:,}"
 
 
 def _where(e, dev) -> str:

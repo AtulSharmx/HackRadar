@@ -78,9 +78,11 @@ export function PrefsProvider({ children }) {
   // Offline when saving? Retry as soon as we have a session again.
   useEffect(() => {
     if (!state.dirty || !user) return;
-    push(state.prefs).then((ok) => {
+    const sent = state.prefs;
+    push(sent).then((ok) => {
       if (!ok) return;
       setState((s) => {
+        if (s.prefs !== sent) return s; // changed again meanwhile: that newer copy still has to go up
         const next = { ...s, dirty: false };
         write(next);
         return next;

@@ -1,4 +1,4 @@
-import { countdown, daysLeft, dateShort, feeLong, feeShort, inr, prizeShort, timeShort, whereShort } from '../format';
+import { countdown, daysLeft, dateShort, feeLong, feeShort, inr, joinAnd, prizeLong, prizeShort, timeShort, whereShort } from '../format';
 
 // 29 Sep 2026, 11:00 pm IST
 const NOW = new Date('2026-09-29T17:30:00Z');
@@ -38,11 +38,26 @@ test('Indian money formats', () => {
   expect(prizeShort(null)).toBeNull();
 });
 
+test('prize line on the detail screen: one figure, Indian grouping, source figure kept when converted', () => {
+  // Unstop's generated text ("₹150,000 in prizes") repeated the amount in western grouping
+  expect(prizeLong({ prize_amount_inr: 150000, prize_text: '₹150,000 in prizes' })).toBe('₹1,50,000 in prizes');
+  expect(prizeLong({ prize_amount_inr: 880000, prize_approximate: true, prize_text: '$10,000' })).toBe('About ₹8,80,000 in prizes ($10,000)');
+  expect(prizeLong({ prize_amount_inr: null, prize_text: 'Internships and goodies' })).toBe('Internships and goodies');
+  expect(prizeLong({})).toBeNull();
+  expect(joinAnd(['Unstop'])).toBe('Unstop');
+  expect(joinAnd(['Unstop', 'Devfolio'])).toBe('Unstop and Devfolio');
+  expect(joinAnd(['A', 'B', 'C'])).toBe('A, B and C');
+});
+
 test('fee wording', () => {
   expect(feeShort(0)).toBe('Free');
   expect(feeShort(null)).toBe('Fee not listed');
   expect(feeShort(300)).toBe('₹300');
-  expect(feeLong(1000)).toBe('₹1,000 per team');
+  expect(feeLong(1000)).toBe('₹1,000 fee');
+  // Hack2Skill "PAID" with no amount: never shown as free or as unknown
+  expect(feeShort(null, true)).toBe('Paid');
+  expect(feeLong(null, true)).toBe('Paid, amount not listed');
+  expect(feeShort(null, false)).toBe('Free');
 });
 
 test('where: online, exact, approximate, unknown', () => {
@@ -51,6 +66,11 @@ test('where: online, exact, approximate, unknown', () => {
   expect(whereShort({ mode: 'offline' }, 33.2)).toBe('35 km');
   expect(whereShort({ mode: 'offline', location_approximate: true }, 21)).toBe('about 20 km (approx.)');
   expect(whereShort({ mode: 'offline', city: 'Pune' }, null)).toBe('Pune');
+  expect(whereShort({ mode: 'offline' }, 1161)).toBe('1,160 km');
+  // hybrid says so, so a far one under "Within 50 km" is explained
+  expect(whereShort({ mode: 'hybrid', city: 'Pune' }, 1161)).toBe('Hybrid · 1,160 km');
+  expect(whereShort({ mode: 'hybrid', city: 'Pune' }, null)).toBe('Hybrid · Pune');
+  expect(whereShort({ mode: 'hybrid' }, null)).toBe('Hybrid');
 });
 
 test('dates in the brief format', () => {

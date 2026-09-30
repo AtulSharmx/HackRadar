@@ -2,10 +2,13 @@
 //
 // Rules not spelled out in the TRD (same as the Python):
 // - Unknown data never excludes an event (unknown fee passes fee_max), EXCEPT filters the user made
-//   narrow on purpose: solo_only and closing_within_days need a known value.
+//   narrow on purpose: solo_only, paid_only and closing_within_days need a known value.
+// - Fee: fee_max 0 = "Free" (drops events known to charge, even with no amount listed);
+//   paid_only = "Paid" (only events known to charge). Neither = both.
+// - closing_within_days counts calendar days in India, the same days the card's countdown shows.
 // - Hybrid events can be joined online, so the distance filter doesn't apply to them.
 // - Offline event with no coordinates (or no device location) fails max_km: we can't claim it's near.
-import { inr } from './format';
+import { daysLeft as calendarDaysLeft, inr } from './format';
 import { haversineKm } from './geo';
 import { THEME_NAMES } from './labels';
 
@@ -38,6 +41,11 @@ export function daysLeft(event, now) {
 
 const overlap = (a, b) => (a || []).some((x) => (b || []).includes(x));
 
+// true/false when known: a listed amount, else the source's own paid flag. null = unknown.
+export function isPaid(event) {
+  return event.fee_amount != null ? event.fee_amount > 0 : event.is_paid ?? null;
+}
+
 export function matches(event, device, now = new Date()) {
   const f = filterOf(device);
   const left = daysLeft(event, now);
@@ -45,12 +53,15 @@ export function matches(event, device, now = new Date()) {
   if (f.themes?.length && !overlap(f.themes, event.themes)) return false;
   if (f.modes?.length && event.mode && !f.modes.includes(event.mode)) return false;
   const fee = event.fee_amount;
-  if (f.fee_max != null && fee != null && fee > f.fee_max) return false;
+  const paid = isPaid(event);
+  if (f.fee_max != null && (fee != null ? fee > f.fee_max : paid === true && f.fee_max === 0)) return false;
+  if (f.paid_only && paid !== true) return false;
   if (f.max_km != null && event.mode === 'offline') {
     const km = distanceKm(event, device);
     if (km == null || km > f.max_km) return false;
   }
-  if (f.closing_within_days != null && (left == null || left > f.closing_within_days)) return false;
+  if (f.closing_within_days != null
+    && (left == null || calendarDaysLeft(event.registration_deadline, now) > f.closing_within_days)) return false;
   if (f.solo_only && event.solo_allowed !== true) return false;
   if (f.exclude_warnings && event.trust_label === 'warning') return false;
   return true;

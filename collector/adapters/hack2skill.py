@@ -64,11 +64,13 @@ def parse(raw: dict) -> Event:
         registration_deadline=parse_date(raw.get("registrationEnd"), deadline=True),
         start_date=parse_date(raw.get("submissionStart")),
         end_date=parse_date(raw.get("submissionEnd")),
+        posted_at=parse_date(raw.get("registrationStart")),
         themes=classify_themes(title, []),
         team_max=1 if individual else None,
         team_min=1 if individual else None,
         solo_allowed=True if individual else None,
         fee_amount=0 if raw.get("ticket") == "FREE" else None,   # PAID: amount unknown, never guessed
+        is_paid={"FREE": False, "PAID": True}.get(raw.get("ticket")),
         source_verified=raw.get("flag") == "FLAGSHIP",   # run by Hack2Skill itself; COMMUNITY = third party
     )
 

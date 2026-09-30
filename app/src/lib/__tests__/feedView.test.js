@@ -1,4 +1,4 @@
-import { activeChips, applyView, defaultFilters } from '../feedView';
+import { activeChips, applyView, defaultFilters, FEE_CHOICES, feeChoice } from '../feedView';
 
 const NOW = new Date('2026-09-29T06:30:00Z');
 const PREFS = { themes: ['ai_ml'], modes: ['online', 'offline', 'hybrid'], fee_max: null, max_km: 50, hide_warnings: false, lat: 28.46, lng: 77.03 };
@@ -28,6 +28,9 @@ test('sorts', () => {
   const run = (sort) => ids(applyView(E, { filters: f, sort, prefs: PREFS, now: NOW }));
   expect(run('closing')).toEqual(['a', 'b', 'd', 'c']); // unknown deadline left out
   expect(run('newest')[0]).toBe('c');
+  // "Newest" = published on the source; HackRadar finding it later (a new source) doesn't make it new
+  const posted = E.map((e) => ({ ...e, first_seen_at: '2026-09-29T00:00:00Z', posted_at: e.id === 'd' ? '2026-09-27T00:00:00Z' : '2026-09-01T00:00:00Z' }));
+  expect(ids(applyView(posted, { filters: f, sort: 'newest', prefs: PREFS, now: NOW }))[0]).toBe('d');
   expect(run('nearest').slice(0, 2)).toEqual(['c', 'd']); // offline by distance, online last
   expect(run('prize').slice(0, 2)).toEqual(['c', 'b']);
 });
@@ -38,11 +41,33 @@ test('best match: higher score first, closer deadline breaks ties', () => {
   expect(list.indexOf('b')).toBeLessThan(list.indexOf('a')); // AI theme match beats cyber
 });
 
+test('no location yet: online only, and no distance limit that would hide every offline event', () => {
+  const f = defaultFilters({ ...PREFS, lat: null, lng: null, modes: ['online', 'offline', 'hybrid'] });
+  expect(f.modes).toEqual(['online']);
+  expect(f.max_km).toBeNull();
+  expect(defaultFilters({ ...PREFS, fee_max: 500 }).fee_max).toBeNull(); // old "up to ₹500" answers read as both
+});
+
+test('fee: Free, Paid, Both', () => {
+  const paid = { ...base, id: 'p', title: 'Paid Hack', fee_amount: 300, registration_deadline: '2026-10-03T18:29:00Z' };
+  const paidNoAmount = { ...paid, id: 'q', fee_amount: null, is_paid: true };
+  const unknown = { ...paid, id: 'u', fee_amount: null };
+  const list = [E[1], paid, paidNoAmount, unknown];
+  const run = (choice) => ids(applyView(list, { filters: { ...defaultFilters({ ...PREFS, themes: [] }), ...FEE_CHOICES[choice] }, sort: 'closing', prefs: PREFS, now: NOW })).sort();
+  expect(run('free')).toEqual(['b', 'u']); // free, plus "fee not listed" (shown with that label)
+  expect(run('paid')).toEqual(['p', 'q']);
+  expect(run('both')).toEqual(['b', 'p', 'q', 'u']);
+  expect(feeChoice(FEE_CHOICES.paid)).toBe('paid');
+});
+
 test('chips: one per active filter, each removable', () => {
   const f = { ...defaultFilters(PREFS), fee_max: 0, closing_within_days: 7, exclude_warnings: true, modes: ['online'] };
   const chips = activeChips(f, true);
   expect(chips.map((c) => c.label)).toEqual(['AI/ML', 'Online only', 'Free', 'Closing in 7 days', 'No warnings']);
   expect(chips.find((c) => c.key === 'fee').clear(f).fee_max).toBeNull();
+  const paid = activeChips({ ...defaultFilters(PREFS), themes: [], ...FEE_CHOICES.paid }, true);
+  expect(paid.map((c) => c.label)).toEqual(['Paid', 'Within 50 km']);
+  expect(feeChoice(paid[0].clear(FEE_CHOICES.paid))).toBe('both');
   expect(activeChips({ ...defaultFilters(PREFS), themes: [] }, true).map((c) => c.label)).toEqual(['Within 50 km']);
   expect(activeChips({ ...defaultFilters(PREFS), themes: [] }, false)).toEqual([]); // no location: km chip means nothing
 });

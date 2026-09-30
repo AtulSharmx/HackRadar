@@ -54,26 +54,44 @@ export function prizeShort(amount, approximate = false) {
   return `${pre}${inr(amount)}`;
 }
 
-export function feeShort(fee) {
+// Detail "Prizes": one line. A converted amount keeps the source's own figure next to it.
+export function prizeLong(event) {
+  if (!event.prize_amount_inr) return event.prize_text || null;
+  const cash = `₹${inr(event.prize_amount_inr)} in prizes`;
+  return event.prize_approximate ? `About ${cash}${event.prize_text ? ` (${event.prize_text})` : ''}` : cash;
+}
+
+// "Unstop", "Unstop and Devfolio", "Unstop, Devfolio and Hack2Skill"
+export function joinAnd(items) {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
+// paid: the source's own "paid" flag, for listings that charge but give no amount (events.is_paid)
+export function feeShort(fee, paid = null) {
   if (fee === 0) return 'Free';
-  if (fee == null) return 'Fee not listed';
+  if (fee == null) return paid ? 'Paid' : paid === false ? 'Free' : 'Fee not listed';
   return `₹${inr(fee)}`;
 }
 
-export function feeLong(fee) {
+// Sources don't say whether a fee is per person or per team, so neither is claimed
+export function feeLong(fee, paid = null) {
   if (fee === 0) return 'Free';
-  if (fee == null) return 'Fee not listed';
-  return `₹${inr(fee)} per team`;
+  if (fee == null) return paid ? 'Paid, amount not listed' : paid === false ? 'Free' : 'Fee not listed';
+  return `₹${inr(fee)} fee`;
 }
 
-// Card meta: "Online", "12 km", "about 20 km (approx.)", or the city when we can't measure
+// Card meta: "Online", "12 km", "about 20 km (approx.)", or the city when we can't measure.
+// Hybrid says so first: distance filters skip hybrid events (they can be joined online), so a far one
+// under "Within 50 km" must not look like a broken filter.
 export function whereShort(event, km) {
   if (event.mode === 'online') return 'Online';
+  let place = event.city || null;
   if (km != null) {
     const n = km < 10 ? Math.max(1, Math.round(km)) : Math.round(km / 5) * 5 || Math.round(km);
-    return event.location_approximate ? `about ${n} km (approx.)` : `${n} km`;
+    place = event.location_approximate ? `about ${inr(n)} km (approx.)` : `${inr(n)} km`;
   }
-  return event.city || (event.mode === 'hybrid' ? 'Hybrid' : 'Offline');
+  if (event.mode === 'hybrid') return place ? `Hybrid · ${place}` : 'Hybrid';
+  return place || 'Offline';
 }
 
 // "Tue, 30 Sep"

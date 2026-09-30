@@ -59,6 +59,7 @@ def parse(raw: dict) -> Event:
         team_max=team_max if team_max and team_min and team_max >= team_min else None,
         solo_allowed=(team_min == 1) if team_min else None,
         source_verified=bool(raw.get("verified")),
+        posted_at=parse_date(setting.get("reg_starts_at")),   # applications opened; the list has no publish date
     )
 
 

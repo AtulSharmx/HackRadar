@@ -18,8 +18,10 @@ def parse_date(value, deadline: bool = False) -> datetime | None:
     if not value:
         return None
     default = datetime(2000, 1, 1, 23, 59) if deadline else datetime(2000, 1, 1)
+    # dateutil reads "GMT+0530" POSIX-style (as UTC-5:30); Unstop means India time, so drop the "GMT"
+    text = re.sub(r"\b(?:GMT|UTC)(?=[+-]\d)", "", str(value))
     try:
-        dt = dateparser.parse(str(value), default=default)
+        dt = dateparser.parse(text, default=default)
     except (ValueError, OverflowError):
         return None
     if dt.tzinfo is None:

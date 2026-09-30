@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
-import { countdown, feeShort, prizeShort, whereShort } from '../lib/format';
+import { ago, countdown, feeShort, prizeShort, whereShort } from '../lib/format';
 import { layout, motion, radius, space, type, useAppTheme } from '../theme';
 import PressableScale from './PressableScale';
 import { TRUST } from './TrustLabel';
@@ -53,14 +53,15 @@ function Bookmark({ saved, onToggle, title, colors }) {
 }
 
 // event: a row from the events table. km: distance from me (null when unknown).
-function EventCard({ event, km = null, saved = false, onPress, onLongPress, onToggleSave, now }) {
+// posted: when the source published it, shown while the Feed is sorted by Newest (so the order makes sense).
+function EventCard({ event, km = null, saved = false, onPress, onLongPress, onToggleSave, now, posted = null }) {
   const { colors, elevation } = useAppTheme();
   const cd = countdown(event, now);
   const inactive = cd.tone === 'muted';
   const trust = TRUST[event.status === 'stale' ? 'stale' : event.trust_label] || TRUST.check_details;
   const toneColor = cd.tone === 'neutral' ? colors.textSecondary : colors[cd.tone];
   const where = whereShort(event, km);
-  const fee = feeShort(event.fee_amount);
+  const fee = feeShort(event.fee_amount, event.is_paid);
   const prize = prizeShort(event.prize_amount_inr, event.prize_approximate);
   const warning = event.trust_label === 'warning';
 
@@ -68,10 +69,11 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
   const spoken = [
     event.title + (event.organizer ? ` by ${event.organizer}` : ''),
     cd.text,
-    event.mode,
-    where !== 'Online' ? where.replace('km', 'kilometres') : null,
+    // "Online" and "Hybrid · 12 km" already name the mode
+    (event.mode === 'offline' ? `offline, ${where}` : where).replace('km', 'kilometres'),
     fee,
     prize ? `${prize} prize` : null,
+    posted ? `posted ${ago(posted)}` : null,
     trust.word,
   ].filter(Boolean).join(', ');
 
@@ -114,6 +116,7 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
           <Meta icon={MODE_ICON[event.mode] || 'map-marker-outline'} text={where} color={colors.textSecondary} />
           <Meta icon="currency-inr" text={fee} color={colors.textSecondary} />
           {prize ? <Meta icon="trophy-outline" text={prize} color={colors.textSecondary} /> : null}
+          {posted ? <Meta icon="calendar-plus" text={`Posted ${ago(posted)}`} color={colors.textSecondary} /> : null}
         </View>
       </View>
     </PressableScale>
