@@ -1,12 +1,16 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import Button from '../../components/Button';
 import Chip from '../../components/Chip';
-import CityPicker from '../../components/CityPicker';
+import CitySearch from '../../components/CitySearch';
 import OnboardingStep, { Group } from '../../components/OnboardingStep';
 import { findCity } from '../../lib/cities';
 import { useDraft } from '../../lib/draft';
+import { success, warn } from '../../lib/haptics';
+import { locateMe } from '../../lib/places';
 import { layout, radius, space, type, useAppTheme } from '../../theme';
 
 const DISTANCES = [[10, '10 km'], [25, '25 km'], [50, '50 km'], [100, '100 km'], [null, 'Anywhere']];
@@ -34,8 +38,32 @@ export default function LocationStep() {
   const { colors } = useAppTheme();
   const { draft, update } = useDraft();
   const [searching, setSearching] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState(null); // { text, openSettings? }
 
-  // GPS can guess the wrong city: the fields stay editable, and a known city name brings its coordinates
+  const useGps = async () => {
+    setNote(null);
+    setBusy(true);
+    try {
+      const found = await locateMe();
+      if (found.denied) {
+        warn();
+        setNote(found.canAskAgain
+          ? { text: 'No problem, search for your city.' }
+          : { text: 'Location is off for HackRadar. You can still search for your city.', openSettings: true });
+        return;
+      }
+      success();
+      update(found);
+    } catch {
+      warn();
+      setNote({ text: "Couldn't get your location. Search for your city instead." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // GPS can still name the wrong city: the fields stay editable, and a known city name brings its coordinates
   const editCity = (text) => {
     const known = findCity(text);
     update(known ? { city: text, state: known.state, lat: known.lat, lng: known.lng } : { city: text });
@@ -55,9 +83,28 @@ export default function LocationStep() {
       next={{ label: 'Next', onPress: next, disabled: !draft.city }}
       skip={skip}
     >
-      <CityPicker onPick={update} onSearchChange={setSearching} />
+      <View style={styles.actions}>
+        <Button label={busy ? 'Finding you…' : 'Use my location'} onPress={useGps} disabled={busy} />
+        {/* looks like a search box: tapping opens the full-screen search with suggestions under the box */}
+        <Pressable
+          onPress={() => setSearching(true)}
+          style={[styles.fakeSearch, { borderColor: colors.border, backgroundColor: colors.surface }]}
+          accessibilityRole="button"
+          accessibilityLabel="Search your city or area"
+        >
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
+          <Text style={[type.body, { color: colors.textSecondary }]}>Search your city or area</Text>
+        </Pressable>
+      </View>
 
-      {draft.city != null && !searching ? (
+      {note ? (
+        <View style={styles.note}>
+          <Text style={[type.body, { color: colors.textPrimary }]}>{note.text}</Text>
+          {note.openSettings ? <Button label="Open settings" variant="text" onPress={() => Linking.openSettings()} /> : null}
+        </View>
+      ) : null}
+
+      {draft.city != null ? (
         <View style={styles.fields}>
           <Field label="City" value={draft.city} onChangeText={editCity} autoComplete="postal-address-locality" textContentType="addressCity" colors={colors} />
           <Field label="State" value={draft.state} onChangeText={(t) => update({ state: t })} autoComplete="postal-address-region" textContentType="addressState" colors={colors} />
@@ -69,11 +116,26 @@ export default function LocationStep() {
           <Chip key={label} label={label} role="radio" showRemove={false} selected={draft.max_km === km} onPress={() => update({ max_km: km })} />
         ))}
       </Group>
+
+      <CitySearch
+        visible={searching}
+        onClose={() => setSearching(false)}
+        onPick={(place) => {
+          update(place);
+          setSearching(false);
+        }}
+      />
     </OnboardingStep>
   );
 }
 
 const styles = StyleSheet.create({
+  actions: { gap: space.md },
+  fakeSearch: {
+    flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: layout.minTouch,
+    borderWidth: 1, borderRadius: radius.button, paddingHorizontal: space.md,
+  },
+  note: { gap: space.xs },
   fields: { flexDirection: 'row', gap: space.md },
   field: { flex: 1, gap: space.xs },
   input: { borderWidth: 1, borderRadius: radius.button, minHeight: layout.minTouch, paddingHorizontal: space.md },

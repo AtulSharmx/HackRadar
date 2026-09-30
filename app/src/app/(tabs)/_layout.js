@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Tabs } from 'expo-router';
 
+import { select } from '../../lib/haptics';
 import { useAppTheme } from '../../theme';
 
 // Outline icon at rest, filled when the tab is active (one icon family app-wide).
@@ -14,7 +15,9 @@ export default function TabLayout() {
   const { colors } = useAppTheme();
   return (
     <Tabs
+      screenListeners={{ tabPress: () => select() }}
       screenOptions={({ route }) => ({
+        animation: 'shift', // a short slide between tabs instead of a hard cut
         tabBarActiveTintColor: colors.brand,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
@@ -23,6 +26,7 @@ export default function TabLayout() {
         headerTitleAlign: 'center', // user preference (29 Sep): title centered, sync indicator stays right
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { fontSize: 22, fontWeight: '600' },
+        sceneStyle: { backgroundColor: colors.background },
         tabBarIcon: ({ focused, color }) => (
           <MaterialCommunityIcons name={ICONS[route.name][focused ? 1 : 0]} size={24} color={color} />
         ),

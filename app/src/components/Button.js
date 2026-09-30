@@ -1,10 +1,12 @@
 import { StyleSheet, Text } from 'react-native';
 
+import { select, tap } from '../lib/haptics';
 import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../theme';
 import PressableScale from './PressableScale';
 
 // variant: primary (brand fill), secondary (brand outline), text (low priority: Skip, Not yet)
-export default function Button({ label, onPress, variant = 'primary', disabled = false, style, accessibilityHint }) {
+// Every press gets a light tap (a selection tick for text buttons); haptic={false} when the caller does its own.
+export default function Button({ label, onPress, variant = 'primary', disabled = false, style, accessibilityHint, haptic = true }) {
   const { colors } = useAppTheme();
   const look = {
     primary: { box: { backgroundColor: colors.brand }, text: colors.onBrand },
@@ -13,7 +15,10 @@ export default function Button({ label, onPress, variant = 'primary', disabled =
   }[variant];
   return (
     <PressableScale
-      onPress={onPress}
+      onPress={(e) => {
+        if (haptic) (variant === 'text' ? select : tap)();
+        onPress?.(e);
+      }}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}

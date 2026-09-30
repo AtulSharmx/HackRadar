@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import * as Haptics from 'expo-haptics';
 import { StyleSheet, Text } from 'react-native';
 
+import { select } from '../lib/haptics';
 import { CHROME_MAX_SCALE, radius, space, type, useAppTheme } from '../theme';
 import PressableScale from './PressableScale';
 
@@ -13,7 +13,7 @@ export default function Chip({ label, selected = false, onPress, showRemove = se
   return (
     <PressableScale
       onPress={() => {
-        Haptics.selectionAsync();
+        select();
         onPress?.();
       }}
       hitSlop={6}

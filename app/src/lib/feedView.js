@@ -30,6 +30,22 @@ export function defaultFilters(prefs) {
   };
 }
 
+// "Clear" in the Filters sheet: no filter at all, every open hackathon
+export function clearedFilters() {
+  return {
+    themes: [], modes: ALL_MODES, fee_max: null, paid_only: false, max_km: null,
+    closing_within_days: null, solo_only: false, exclude_warnings: false,
+  };
+}
+
+// Feed pages: 10 cards each (user's choice, 30 Sep). page is 1-based and clamped to what exists.
+export const PAGE_SIZE = 10;
+export function pageOf(list, page) {
+  const pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const current = Math.min(Math.max(1, page), pages);
+  return { items: list.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE), page: current, pages };
+}
+
 // Fee filter as one choice: 'free' | 'paid' | 'both', and back
 export const feeChoice = (f) => (f.paid_only ? 'paid' : f.fee_max === 0 ? 'free' : 'both');
 export const FEE_CHOICES = {

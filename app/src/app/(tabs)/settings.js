@@ -6,7 +6,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-na
 
 import Button from '../../components/Button';
 import Chip from '../../components/Chip';
-import CityPicker from '../../components/CityPicker';
+import CitySearch from '../../components/CitySearch';
 import { Group } from '../../components/OnboardingStep';
 import Sheet from '../../components/Sheet';
 import SwitchRow from '../../components/SwitchRow';
@@ -14,8 +14,9 @@ import { useToast } from '../../components/Toast';
 import { DEGREES, THEME_NAMES, THEMES, yearOptions } from '../../lib/labels';
 import { askNotificationPermission } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
+import { select } from '../../lib/haptics';
 import { useSession } from '../../lib/session';
-import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../../theme';
+import { CHROME_MAX_SCALE, layout, radius, space, THEME_CHOICES, type, useAppTheme, useThemeChoice } from '../../theme';
 
 // Same choices as onboarding
 const MODES = [['Online', ['online']], ['Offline', ['offline', 'hybrid']], ['Both', ['online', 'offline', 'hybrid']]];
@@ -46,7 +47,16 @@ function Row({ label, value, onPress, colors, last }) {
   );
   const style = [styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }];
   return onPress ? (
-    <Pressable onPress={onPress} style={style} android_ripple={{ color: colors.border }} accessibilityRole="button" accessibilityLabel={`${label}, ${value}`}>
+    <Pressable
+      onPress={() => {
+        select();
+        onPress();
+      }}
+      style={style}
+      android_ripple={{ color: colors.border }}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${value}`}
+    >
       {body}
     </Pressable>
   ) : (
@@ -55,7 +65,7 @@ function Row({ label, value, onPress, colors, last }) {
 }
 
 const SHEET_TITLES = {
-  themes: 'Interests', mode: 'Mode', fee: 'Fee', study: 'Degree and year', city: 'Your city', distance: 'How far can you travel?',
+  themes: 'Interests', mode: 'Mode', fee: 'Fee', study: 'Degree and year', distance: 'How far can you travel?', look: 'Appearance',
 };
 
 // App Flow "Settings flows": one scrolling list; every change saves at once (phone first, then the devices row).
@@ -67,10 +77,12 @@ export default function SettingsScreen() {
   const params = useLocalSearchParams();
   const [open, setOpen] = useState(null); // key of SHEET_TITLES
   const [lastThemeNote, setLastThemeNote] = useState(false);
+  const [cityOpen, setCityOpen] = useState(false);
+  const { choice: look, setChoice: setLook } = useThemeChoice();
 
   // Feed's "Set city" opens the city picker straight away (a new "at" each time it's tapped)
   useEffect(() => {
-    if (params.open === 'city') setOpen('city');
+    if (params.open === 'city') setCityOpen(true);
   }, [params.open, params.at]);
 
   if (!prefs) return null; // onboarding not finished: this tab isn't reachable then
@@ -150,27 +162,14 @@ export default function SettingsScreen() {
         ) : null}
       </>
     );
-  } else if (open === 'city') {
+  } else if (open === 'look') {
     sheetBody = (
-      <>
-        <CityPicker
-          searchFirst
-          onPick={(p) => {
-            pickAndClose(p);
-            toast(p.city ? `Location set to ${p.city}.` : 'Location set.');
-          }}
-        />
-        {prefs.city ? (
-          <Button
-            label="Remove my location"
-            variant="text"
-            onPress={() => {
-              pickAndClose({ city: null, state: null, lat: null, lng: null });
-              toast('Location removed. The Feed shows online events.');
-            }}
-          />
-        ) : null}
-      </>
+      <Group label="Theme" note={look === 'system' ? "Follows your phone's light or dark setting." : null}>
+        {THEME_CHOICES.map(([key, label]) => radio(look === key, label, () => {
+          setLook(key);
+          close();
+        }))}
+      </Group>
     );
   } else if (open === 'distance') {
     sheetBody = (
@@ -191,7 +190,7 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title="LOCATION" colors={colors}>
-          <Row label="City" value={place} onPress={() => setOpen('city')} colors={colors} />
+          <Row label="City" value={place} onPress={() => setCityOpen(true)} colors={colors} />
           <Row
             label="Travel distance"
             value={DISTANCES.find(([km]) => km === prefs.max_km)?.[1] || 'Anywhere'}
@@ -199,6 +198,10 @@ export default function SettingsScreen() {
             colors={colors}
             last
           />
+        </Section>
+
+        <Section title="APPEARANCE" colors={colors}>
+          <Row label="Theme" value={THEME_CHOICES.find(([k]) => k === look)?.[1]} onPress={() => setOpen('look')} colors={colors} last />
         </Section>
 
         <Section title="NOTIFICATIONS AND FEED" colors={colors}>
@@ -226,13 +229,27 @@ export default function SettingsScreen() {
         {error && !user ? <Button label="Retry connection" variant="secondary" onPress={retry} style={styles.retry} /> : null}
 
         <Text style={[type.meta, styles.credit, { color: colors.textSecondary }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-          City data © OpenStreetMap contributors
+          Place search by Photon (komoot) · City data © OpenStreetMap contributors
         </Text>
       </ScrollView>
 
       <Sheet visible={!!open} onClose={close} title={SHEET_TITLES[open] || ''}>
         {sheetBody}
       </Sheet>
+      <CitySearch
+        visible={cityOpen}
+        onClose={() => setCityOpen(false)}
+        onPick={(p) => {
+          update(p);
+          setCityOpen(false);
+          toast(p.city ? `Location set to ${p.city}.` : 'Location set.');
+        }}
+        onRemove={prefs.city ? () => {
+          update({ city: null, state: null, lat: null, lng: null });
+          setCityOpen(false);
+          toast('Location removed. The Feed shows online events.');
+        } : null}
+      />
     </View>
   );
 }

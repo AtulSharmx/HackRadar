@@ -2,6 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SORTS } from '../lib/feedView';
+import { select } from '../lib/haptics';
 import { layout, space, type, useAppTheme } from '../theme';
 import Button from './Button';
 import Sheet from './Sheet';
@@ -28,7 +29,10 @@ export default function SortSheet({ visible, onClose, sort, onPick, hasLocation,
             <Pressable
               key={key}
               disabled={disabled}
-              onPress={() => onPick(key)}
+              onPress={() => {
+                select();
+                onPick(key);
+              }}
               android_ripple={{ color: colors.border }}
               style={[styles.row, { borderBottomColor: colors.border }]}
               accessibilityRole="radio"

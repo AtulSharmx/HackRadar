@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { applyView, FEE_CHOICES, feeChoice } from '../lib/feedView';
+import { applyView, clearedFilters, FEE_CHOICES, feeChoice } from '../lib/feedView';
 import { THEMES } from '../lib/labels';
 import { space, type, useAppTheme } from '../theme';
 import Button from './Button';
@@ -16,7 +16,7 @@ const DISTANCES = [[10, '10 km'], [25, '25 km'], [50, '50 km'], [100, '100 km'],
 const same = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 // Changes stay inside the sheet until "Show N hackathons"; the count updates live.
-export default function FilterSheet({ visible, onClose, filters, defaults, onApply, onSaveAlert, onSetCity, events, query, sort, prefs }) {
+export default function FilterSheet({ visible, onClose, filters, onApply, onSaveAlert, onSetCity, events, query, sort, prefs }) {
   const { colors } = useAppTheme();
   const [f, setF] = useState(filters);
   useEffect(() => {
@@ -41,7 +41,8 @@ export default function FilterSheet({ visible, onClose, filters, defaults, onApp
         <>
           <Button label="Save as my alert filter" variant="text" onPress={() => onSaveAlert(f)} />
           <View style={styles.footerRow}>
-            <Button label="Reset" variant="secondary" onPress={() => setF(defaults)} />
+            {/* Clear = no filters at all (user's wording, 30 Sep); my defaults come back with the next app open */}
+            <Button label="Clear" variant="secondary" onPress={() => setF(clearedFilters())} />
             <Button
               label={count === 1 ? 'Show 1 hackathon' : `Show ${count} hackathons`}
               onPress={() => onApply(f)}

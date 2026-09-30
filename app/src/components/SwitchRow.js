@@ -1,5 +1,6 @@
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
+import { select } from '../lib/haptics';
 import { layout, space, type, useAppTheme } from '../theme';
 
 // Label + switch, the whole row 48 dp. The thumb gets its own colour: the surface colour alone
@@ -14,7 +15,10 @@ export default function SwitchRow({ label, hint, value, onChange }) {
       </View>
       <Switch
         value={value}
-        onValueChange={onChange}
+        onValueChange={(v) => {
+          select();
+          onChange(v);
+        }}
         trackColor={{ true: colors.brand, false: colors.border }}
         thumbColor={value ? colors.surface : colors.textSecondary}
         accessibilityLabel={label}
