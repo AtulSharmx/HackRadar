@@ -32,7 +32,8 @@ export function useSession() {
   return useContext(SessionContext);
 }
 
-const sameUser = (a, b) => a?.id === b?.id && a?.email === b?.email && a?.is_anonymous === b?.is_anonymous;
+const sameUser = (a, b) => a?.id === b?.id && a?.email === b?.email && a?.phone === b?.phone
+  && a?.is_anonymous === b?.is_anonymous && (a?.identities?.length ?? 0) === (b?.identities?.length ?? 0);
 
 // Never blocks the UI: cached content can show while this runs; failures retry when the app comes back.
 export function SessionProvider({ children }) {
@@ -75,6 +76,15 @@ export function SessionProvider({ children }) {
     };
   }, [retry]);
 
-  const value = { ...state, retry, isGuest: state.user ? !!state.user.is_anonymous : true, email: state.user?.email || null };
+  const meta = state.user?.user_metadata || {};
+  const value = {
+    ...state,
+    retry,
+    isGuest: state.user ? !!state.user.is_anonymous : true,
+    email: state.user?.email || null,
+    phone: state.user?.phone ? `+${state.user.phone}` : null,
+    name: meta.full_name || meta.name || meta.user_name || null, // from Google or GitHub
+    avatar: meta.avatar_url || meta.picture || null,
+  };
   return createElement(SessionContext.Provider, { value }, children);
 }
