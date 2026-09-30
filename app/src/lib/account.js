@@ -128,7 +128,15 @@ async function signInWithGoogleNative({ GoogleSignin, isSuccessResponse }) {
 // Resolves with the signed-in user, or null when the user closed the picker or browser.
 export async function signInWithProvider(provider) {
   const native = provider === 'google' ? nativeGoogle() : null;
-  if (native) return signInWithGoogleNative(native);
+  if (native) {
+    try {
+      return await signInWithGoogleNative(native);
+    } catch (e) {
+      const { statusCodes } = native;
+      if (e?.code === statusCodes?.SIGN_IN_CANCELLED || e?.code === statusCodes?.IN_PROGRESS) return null;
+      // anything else (e.g. DEVELOPER_ERROR: the Android OAuth client/SHA-1 isn't set up yet): the browser still works
+    }
+  }
   browserSignIn = true;
   try {
     return await signInInBrowser(provider);
