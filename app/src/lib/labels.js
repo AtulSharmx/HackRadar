@@ -19,12 +19,15 @@ export const DEGREES = [
   { key: 'other', label: 'Other', years: 5 },
 ];
 
-// [[1, 'Year 1'], ..., [4, 'Year 4 (Honours)']] for the chosen degree; [] until a degree is picked
+// 1 -> "1st", 2 -> "2nd", 3 -> "3rd", 4 -> "4th" (years only go to 5)
+const ordinal = (n) => `${n}${({ 1: 'st', 2: 'nd', 3: 'rd' })[n] || 'th'}`;
+
+// [[1, '1st Year'], ..., [4, '4th Year (Honours)']] for the chosen degree; [] until a degree is picked
 export function yearOptions(degreeKey) {
   const d = DEGREES.find((x) => x.key === degreeKey);
   if (!d) return [];
   return Array.from({ length: d.years }, (_, i) => {
     const y = i + 1;
-    return [y, y === d.honoursYear ? `Year ${y} (Honours)` : `Year ${y}`];
+    return [y, y === d.honoursYear ? `${ordinal(y)} Year (Honours)` : `${ordinal(y)} Year`];
   });
 }

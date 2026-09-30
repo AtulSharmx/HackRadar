@@ -1,41 +1,138 @@
-// Sign in / create account with a 6-digit email code (no password), and log out. docs/auth-plan.md.
-// New email: it is attached to the current guest (same user id), so saves and preferences simply stay.
-// Email that already has an account: sign in to it; the phone's saves are then uploaded to it (lib/saved.js).
+// Sign in / create account without passwords: Google, GitHub, a code by SMS (India, +91) or by email.
+// A guest who signs in keeps their user id when the email/phone/Google account is new (it is attached to
+// the guest), so saves and preferences simply stay. If it already belongs to an account, that account is
+// signed in and this phone's saves are uploaded to it (lib/saved.js). docs/auth-plan.md
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+
 import { supabase } from './supabase';
 
-export const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((s || '').trim());
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-// -> 'link' (code confirms the email on this guest) or 'signin' (code signs in to an existing account)
-export async function sendCode(email) {
-  const address = email.trim().toLowerCase();
+export const RESEND_AFTER = 30; // seconds before "Resend code" works again
+export const CODE_LENGTH = 6;
+
+export const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((s || '').trim());
+export const phoneDigits = (s) => (s || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+export const isIndianMobile = (s) => /^[6-9]\d{9}$/.test(phoneDigits(s));
+export const fullPhone = (s) => `+91${phoneDigits(s)}`;
+
+// Which sign-in methods the server has switched on ({ google, github, phone, email }), so a method that
+// isn't set up yet is shown as "soon" instead of failing. Public endpoint, no user data.
+export async function getProviders() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/settings`, { headers: { apikey: SUPABASE_KEY } });
+    return (await res.json()).external || {};
+  } catch {
+    return {};
+  }
+}
+
+async function currentUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user?.is_anonymous) {
-    const { error } = await supabase.auth.updateUser({ email: address });
+  return user;
+}
+
+const already = (error) => /already|registered|exists/i.test(`${error?.message} ${error?.code}`);
+
+// Email or SMS code. channel: 'email' | 'phone'. -> 'link' (confirms it on this guest) | 'signin'
+export async function sendCode(channel, value) {
+  const target = channel === 'phone' ? { phone: fullPhone(value) } : { email: value.trim().toLowerCase() };
+  if ((await currentUser())?.is_anonymous) {
+    const { error } = await supabase.auth.updateUser(target);
     if (!error) return 'link';
-    if (!/already|registered|exists/i.test(error.message || '')) throw error;
+    if (!already(error)) throw error;
   }
-  const { error } = await supabase.auth.signInWithOtp({ email: address, options: { shouldCreateUser: true } });
+  const { error } = await supabase.auth.signInWithOtp({ ...target, options: { shouldCreateUser: true } });
   if (error) throw error;
   return 'signin';
 }
 
-export async function verifyCode(email, code, mode) {
+export async function verifyCode(channel, value, code, mode) {
+  const phone = channel === 'phone';
   const { data, error } = await supabase.auth.verifyOtp({
-    email: email.trim().toLowerCase(),
+    ...(phone ? { phone: fullPhone(value) } : { email: value.trim().toLowerCase() }),
     token: code.trim(),
-    type: mode === 'link' ? 'email_change' : 'email',
+    type: phone ? (mode === 'link' ? 'phone_change' : 'sms') : (mode === 'link' ? 'email_change' : 'email'),
   });
   if (error) throw error;
   return data.user;
 }
 
+// "hackradar://auth-callback?code=..." or "...#access_token=...": both the query and the fragment
+export function paramsOf(url) {
+  const out = {};
+  const [beforeHash, hash] = (url || '').split('#');
+  const query = beforeHash.split('?')[1];
+  for (const part of [query, hash]) {
+    for (const pair of (part || '').split('&')) {
+      const [k, v = ''] = pair.split('=');
+      if (k) out[decodeURIComponent(k)] = decodeURIComponent(v.replace(/\+/g, ' '));
+    }
+  }
+  return out;
+}
+
+async function browserRound(request, redirect) {
+  const { data, error } = await request;
+  if (error) throw error;
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirect);
+  return result.type === 'success' ? paramsOf(result.url) : null; // null: the user closed the browser
+}
+
+// Google or GitHub in the browser, back to the app with a one-time code.
+// Resolves with the signed-in user, or null when the user closed the browser.
+export async function signInWithProvider(provider) {
+  const redirectTo = Linking.createURL('auth-callback');
+  const options = { redirectTo, skipBrowserRedirect: true };
+  let p;
+  if ((await currentUser())?.is_anonymous) {
+    p = await browserRound(supabase.auth.linkIdentity({ provider, options }), redirectTo);
+    // that Google/GitHub account already has a HackRadar account: sign in to it instead
+    if (p && already({ message: p.error_description, code: p.error_code })) p = null;
+    else if (p === null) return null;
+  }
+  if (!p) p = await browserRound(supabase.auth.signInWithOAuth({ provider, options }), redirectTo);
+  if (!p) return null;
+  if (p.error) throw new Error(p.error_description || p.error);
+  if (p.code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(p.code);
+    if (error) throw error;
+    return data.user;
+  }
+  if (p.access_token) {
+    const { data, error } = await supabase.auth.setSession({ access_token: p.access_token, refresh_token: p.refresh_token });
+    if (error) throw error;
+    return data.user;
+  }
+  throw new Error('The sign-in answer had no session');
+}
+
+// A new phone signing in before onboarding: the account's own feed setup, if it has one
+export async function savedPrefsOf(user) {
+  const { data } = await supabase.from('devices').select('prefs,city,state,lat_rounded,lng_rounded,alerts_enabled').eq('id', user.id).maybeSingle();
+  if (!data?.prefs?.themes?.length) return null;
+  return {
+    ...data.prefs,
+    city: data.city,
+    state: data.state,
+    lat: data.lat_rounded,
+    lng: data.lng_rounded,
+    notifications: !!data.alerts_enabled,
+  };
+}
+
 // Plain words for the errors people actually hit
-export function explain(error) {
+export function explain(error, what = 'That') {
   const m = `${error?.message || ''} ${error?.code || ''}`.toLowerCase();
+  if (m.includes('provider') && (m.includes('not enabled') || m.includes('disabled') || m.includes('unsupported'))) {
+    return `${what} sign-in isn't switched on yet. Use another way for now.`;
+  }
   if (m.includes('rate') || m.includes('too many') || m.includes('seconds')) return 'Too many codes asked for. Wait a minute and try again.';
-  if (m.includes('expired') || m.includes('invalid') || m.includes('otp')) return "That code didn't work. Check it, or send a new one.";
+  if (m.includes('expired') || m.includes('invalid') || m.includes('otp') || m.includes('token')) return "That code didn't work. Check it, or send a new one.";
   if (m.includes('network') || m.includes('fetch')) return "Can't reach HackRadar. Check your connection.";
   return "Couldn't do that right now. Try again in a minute.";
 }

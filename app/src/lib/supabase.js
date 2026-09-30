@@ -13,7 +13,8 @@ export const supabase = createClient(url, key, {
     storage: localStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false, // no URL to read a session from on Android
+    detectSessionInUrl: false, // the sign-in screen reads the OAuth answer itself (lib/account.js)
+    flowType: 'pkce', // Google/GitHub return a one-time code, swapped for a session on the phone
   },
 });
 
