@@ -41,16 +41,23 @@ async function currentUser() {
 }
 
 const already = (error) => /already|registered|exists/i.test(`${error?.message} ${error?.code}`);
+// where an emailed link (instead of a code) or a browser sign-in comes back to: this app
+const backToApp = () => Linking.createURL('auth-callback');
+
+// true while a browser sign-in waits for its answer, so the auth-callback route doesn't also use the code
+let browserSignIn = false;
+export const browserSignInActive = () => browserSignIn;
 
 // Email or SMS code. channel: 'email' | 'phone'. -> 'link' (confirms it on this guest) | 'signin'
 export async function sendCode(channel, value) {
   const target = channel === 'phone' ? { phone: fullPhone(value) } : { email: value.trim().toLowerCase() };
+  const emailRedirectTo = backToApp(); // if the email template sends a link, tapping it still signs in here
   if ((await currentUser())?.is_anonymous) {
-    const { error } = await supabase.auth.updateUser(target);
+    const { error } = await supabase.auth.updateUser(target, { emailRedirectTo });
     if (!error) return 'link';
     if (!already(error)) throw error;
   }
-  const { error } = await supabase.auth.signInWithOtp({ ...target, options: { shouldCreateUser: true } });
+  const { error } = await supabase.auth.signInWithOtp({ ...target, options: { shouldCreateUser: true, emailRedirectTo } });
   if (error) throw error;
   return 'signin';
 }
@@ -119,7 +126,16 @@ async function signInWithGoogleNative({ GoogleSignin, isSuccessResponse }) {
 export async function signInWithProvider(provider) {
   const native = provider === 'google' ? nativeGoogle() : null;
   if (native) return signInWithGoogleNative(native);
-  const redirectTo = Linking.createURL('auth-callback');
+  browserSignIn = true;
+  try {
+    return await signInInBrowser(provider);
+  } finally {
+    browserSignIn = false;
+  }
+}
+
+async function signInInBrowser(provider) {
+  const redirectTo = backToApp();
   const options = { redirectTo, skipBrowserRedirect: true };
   let p;
   if ((await currentUser())?.is_anonymous) {
@@ -144,6 +160,15 @@ export async function signInWithProvider(provider) {
   throw new Error('The sign-in answer had no session');
 }
 
+// hackradar://auth-callback?code=... opened from an emailed link (or a browser sign-in finishing late)
+export async function finishFromLink(params) {
+  if (params.error_description || params.error) throw new Error(params.error_description || params.error);
+  if (!params.code) return null;
+  const { data, error } = await supabase.auth.exchangeCodeForSession(params.code);
+  if (error) throw error;
+  return data.user;
+}
+
 // A new phone signing in before onboarding: the account's own feed setup, if it has one
 export async function savedPrefsOf(user) {
   const { data } = await supabase.from('devices').select('prefs,city,state,lat_rounded,lng_rounded,alerts_enabled').eq('id', user.id).maybeSingle();
@@ -161,13 +186,23 @@ export async function savedPrefsOf(user) {
 // Plain words for the errors people actually hit
 export function explain(error, what = 'That') {
   const m = `${error?.message || ''} ${error?.code || ''}`.toLowerCase();
+  if (m.includes('manual linking')) return `${what} sign-in needs one more server setting (manual linking). Use email for now.`;
   if (m.includes('provider') && (m.includes('not enabled') || m.includes('disabled') || m.includes('unsupported'))) {
     return `${what} sign-in isn't switched on yet. Use another way for now.`;
   }
   if (m.includes('rate') || m.includes('too many') || m.includes('seconds')) return 'Too many codes asked for. Wait a minute and try again.';
-  if (m.includes('expired') || m.includes('invalid') || m.includes('otp') || m.includes('token')) return "That code didn't work. Check it, or send a new one.";
+  if (m.includes('access_denied') || m.includes('access denied')) return `${what} didn't allow the sign-in. Try again, or use email.`;
+  if (!m.includes('client') && (m.includes('expired') || m.includes('otp') || m.includes('token'))) {
+    return "That code didn't work. Check it, or send a new one.";
+  }
   if (m.includes('network') || m.includes('fetch')) return "Can't reach HackRadar. Check your connection.";
   return "Couldn't do that right now. Try again in a minute.";
+}
+
+// The server's own words, shown small under the plain message so a failure can be traced
+export function detailOf(error) {
+  const d = `${error?.message || error || ''}`.trim();
+  return d ? d.slice(0, 160) : null;
 }
 
 export async function logOut() {
