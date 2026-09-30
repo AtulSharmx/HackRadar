@@ -108,3 +108,27 @@ def test_enrich_drops_rounds_dated_after_the_event_ends():
     unstop.enrich(FakeClient(detail), [e], {}, limit=5)
     assert [r["title"] for r in e.rounds] == ["Idea Round"]
     assert e.start_date == datetime(2026, 10, 10, 4, 30, tzinfo=timezone.utc)
+
+
+# ---------- A4: Devfolio ----------
+
+def test_devfolio_fixture():
+    from collector.adapters import devfolio
+    raws = [h["_source"] for h in load("devfolio_search.json")["hits"]["hits"]]
+    events = {e.title: e for e in (devfolio.parse(r) for r in raws)}
+    kol = events["HackInverse 1.0"]
+    assert kol.mode == "offline" and kol.city == "Kolkata" and kol.in_india and kol.source_verified
+    assert kol.registration_url.startswith("https://") and kol.organizer is None   # never invented
+    assert kol.registration_deadline is not None and kol.start_date is not None
+    assert all(e.themes for e in events.values())
+    abroad = [e for e in events.values() if e.mode == "offline" and not e.in_india]
+    assert abroad and not any(devfolio.is_relevant(e) for e in abroad)   # the German one stays out
+
+
+def test_verified_listing_without_organizer_is_not_a_warning():
+    from collector import trust
+    row = {"organizer": None, "source_verified": True, "registration_url": "https://x.devfolio.co/",
+           "registration_deadline": "2026-10-20T18:29:00+00:00", "mode": "online", "fee_amount": 0, "status": "open"}
+    assert "no_organizer" not in [f["code"] for f in trust.red_flags(row, {"devfolio": row})]
+    unverified = {**row, "source_verified": False}
+    assert "no_organizer" in [f["code"] for f in trust.red_flags(unverified, {"devfolio": unverified})]

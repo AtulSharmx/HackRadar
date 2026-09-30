@@ -35,6 +35,7 @@ class Event:
     prize_amount_inr: int | None = None
     prize_approximate: bool = False
     eligibility_text: str | None = None
+    source_verified: bool = False          # the platform itself verified this listing (Devfolio "verified")
     rounds: list[dict] = field(default_factory=list)   # [{title, start, end}] UTC iso, from source details
     listing_updated_at: str | None = None   # the source's own updated_at, from the list
     detail_updated_at: str | None = None    # set when details are current; saved on event_sources
