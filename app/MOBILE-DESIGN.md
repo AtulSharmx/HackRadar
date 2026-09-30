@@ -39,3 +39,5 @@ max taps to any core screen: 2
 - No gradients, illustrations, emoji, stock images, exclamation marks (except the one welcome line).
 - Deviations from the mobile-taste skill, on purpose: Settings is a tab (App Flow doc decides).
 - Deviation from the brief, user's choice (29 Sep): tab header titles are centered ("HackRadar" on Feed), not left.
+- Deviation from the brief, user's choice (30 Sep): light theme only; the dark theme was removed.
+- Settings shows every choice in place (chips, Segmented); bottom sheets are for Feed filters and sort only.

@@ -1,47 +1,27 @@
 // HackRadar design tokens. Source of truth: docs/UI UX Design Brief HackRadar.md.
 // Screens and components read everything from here. No hex values anywhere else.
-import { createContext, createElement, useCallback, useContext, useState } from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform } from 'react-native';
 
-const palette = {
-  light: {
-    background: '#F7F8FA',
-    surface: '#FFFFFF',
-    surfaceSoft: '#EEF1F4', // summary box, skeletons, pressed rows
-    textPrimary: '#111418',
-    textSecondary: '#5B6470',
-    border: '#E3E6EA',
-    brand: '#0E7C66',
-    onBrand: '#FFFFFF',
-    brandSoft: '#E1F2EE', // selected chip background alternative, focus rings
-    urgent: '#C62828', // deadline <= 2 days, warnings. Never decoration.
-    soon: '#9A5B00', // deadline 3-7 days, check details. Never decoration.
-    muted: '#697280', // stale, closed. Brief had #8A929C (2.96:1); darkened to pass 4.5:1
-    urgentSoft: '#FBEAEA', // warning box fill
-    inverseSurface: '#111418', // toast
-    inverseText: '#F7F8FA',
-    inverseBrand: '#3DD6B0', // toast action: the dark-mode brand reads on the dark toast
-    scrim: 'rgba(0,0,0,0.45)', // behind bottom sheets
-  },
-  dark: {
-    background: '#0D1117',
-    surface: '#161B22',
-    surfaceSoft: '#1E252E',
-    textPrimary: '#E6EDF3',
-    textSecondary: '#9AA4B2',
-    border: '#2A313C',
-    brand: '#3DD6B0',
-    onBrand: '#0D1117',
-    brandSoft: '#123A33',
-    urgent: '#FF6B6B',
-    soon: '#F2B84B',
-    muted: '#7D8793', // brief had #6B7480 (4.0:1); lightened to pass 4.5:1
-    urgentSoft: '#2A1618',
-    inverseSurface: '#E6EDF3',
-    inverseText: '#0D1117',
-    inverseBrand: '#0E7C66',
-    scrim: 'rgba(0,0,0,0.6)',
-  },
+// Light only (user's call, 30 Sep 2026: the dark look felt "AI-made"). One set of colours, so switching,
+// delays and "match device" problems can't happen.
+const colors = {
+  background: '#F7F8FA',
+  surface: '#FFFFFF',
+  surfaceSoft: '#EEF1F4', // summary box, skeletons, pressed rows, segmented track
+  textPrimary: '#111418',
+  textSecondary: '#5B6470',
+  border: '#E3E6EA',
+  brand: '#0E7C66',
+  onBrand: '#FFFFFF',
+  brandSoft: '#E1F2EE', // selected chip background alternative, focus rings
+  urgent: '#C62828', // deadline <= 2 days, warnings. Never decoration.
+  soon: '#9A5B00', // deadline 3-7 days, check details. Never decoration.
+  muted: '#697280', // stale, closed. Brief had #8A929C (2.96:1); darkened to pass 4.5:1
+  urgentSoft: '#FBEAEA', // warning box fill
+  inverseSurface: '#111418', // toast
+  inverseText: '#F7F8FA',
+  inverseBrand: '#3DD6B0', // toast action on the dark toast
+  scrim: 'rgba(0,0,0,0.45)', // behind sheets and popups
 };
 
 // 4-point grid from the brief
@@ -73,55 +53,17 @@ export const motion = {
   spring: { damping: 20, stiffness: 320, mass: 0.6 },
 };
 
-// Brief: no shadow in dark mode (border instead), a very light one in light mode.
-// iOS shadow props and Android elevation always travel together.
-function elevation(scheme) {
-  if (scheme === 'dark') return { card: {} };
-  return {
-    card: Platform.select({
-      android: { elevation: 1 },
-      default: { shadowColor: '#111418', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
-    }),
-  };
-}
+// A very light shadow; iOS shadow props and Android elevation always travel together.
+const elevation = {
+  card: Platform.select({
+    android: { elevation: 1 },
+    default: { shadowColor: '#111418', shadowOpacity: 0.06, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  }),
+};
 
-// Appearance: 'light' (default: the user found the dark look "AI-made"), 'dark', or 'system' (follow the phone).
-// Kept on the phone only; it's a device setting, not a preference the server needs.
-const THEME_KEY = 'hackradar.theme.v1';
-export const THEME_CHOICES = [['light', 'Light'], ['dark', 'Dark'], ['system', 'Match device']];
-const ThemeChoiceContext = createContext({ choice: 'light', setChoice: () => {} });
-
-function readChoice() {
-  try {
-    const v = globalThis.localStorage?.getItem(THEME_KEY);
-    return THEME_CHOICES.some(([k]) => k === v) ? v : 'light';
-  } catch {
-    return 'light';
-  }
-}
-
-export function ThemeChoiceProvider({ children }) {
-  const [choice, setState] = useState(readChoice);
-  const setChoice = useCallback((next) => {
-    setState(next);
-    try {
-      globalThis.localStorage?.setItem(THEME_KEY, next);
-    } catch {
-      // still applies for this session
-    }
-  }, []);
-  return createElement(ThemeChoiceContext.Provider, { value: { choice, setChoice } }, children);
-}
-
-export function useThemeChoice() {
-  return useContext(ThemeChoiceContext);
-}
-
+// Kept as a hook so screens don't change; scheme is always 'light'
 export function useAppTheme() {
-  const system = useColorScheme();
-  const { choice } = useContext(ThemeChoiceContext);
-  const scheme = choice === 'system' ? (system === 'dark' ? 'dark' : 'light') : choice;
-  return { scheme, colors: palette[scheme], elevation: elevation(scheme) };
+  return { scheme: 'light', colors, elevation };
 }
 
-export { palette };
+export { colors };

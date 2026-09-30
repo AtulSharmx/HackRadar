@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -6,7 +6,7 @@ import { ToastProvider } from '../components/Toast';
 import { PrefsProvider, usePrefs } from '../lib/prefs';
 import { SavedProvider } from '../lib/saved';
 import { SessionProvider } from '../lib/session';
-import { ThemeChoiceProvider, useAppTheme } from '../theme';
+import { useAppTheme } from '../theme';
 
 // Onboarding until my preferences exist, then the app. Protected routes swap them; no conditional renders in screens.
 function Routes() {
@@ -29,19 +29,28 @@ function Routes() {
             headerTintColor: colors.textPrimary,
           }}
         />
+        <Stack.Screen
+          name="account"
+          options={{
+            title: 'Sign in',
+            animation: 'slide_from_bottom',
+            headerStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+            headerTintColor: colors.textPrimary,
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );
 }
 
-// Navigation chrome takes our tokens too, so the theme never flashes the other colour between screens.
-function ThemedApp() {
-  const { scheme, colors } = useAppTheme();
-  const nav = scheme === 'dark' ? DarkTheme : DefaultTheme;
+// Navigation chrome takes our tokens too, so no screen flashes a different colour.
+export default function RootLayout() {
+  const { colors } = useAppTheme();
   const theme = {
-    ...nav,
+    ...DefaultTheme,
     colors: {
-      ...nav.colors,
+      ...DefaultTheme.colors,
       primary: colors.brand,
       background: colors.background,
       card: colors.surface,
@@ -57,7 +66,7 @@ function ThemedApp() {
           <PrefsProvider>
             <SavedProvider>
               <ToastProvider>
-                <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+                <StatusBar style="dark" />
                 <Routes />
               </ToastProvider>
             </SavedProvider>
@@ -65,13 +74,5 @@ function ThemedApp() {
         </SessionProvider>
       </ThemeProvider>
     </GestureHandlerRootView>
-  );
-}
-
-export default function RootLayout() {
-  return (
-    <ThemeChoiceProvider>
-      <ThemedApp />
-    </ThemeChoiceProvider>
   );
 }

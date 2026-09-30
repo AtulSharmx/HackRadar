@@ -148,6 +148,21 @@ export function SavedProvider({ children }) {
     return () => sub.remove();
   }, [sync]);
 
+  // signed in to an account that already existed: everything saved on this phone is uploaded to it
+  // (the next sync also brings down what the account saved elsewhere)
+  const owner = useRef(null);
+  useEffect(() => {
+    if (!user) return;
+    if (owner.current && owner.current !== user.id) {
+      const cur = stateRef.current;
+      counter.current += 1;
+      const pending = { ...cur.pending };
+      for (const id of Object.keys(cur.entries)) pending[id] = `upsert:${Date.now()}.${counter.current}`;
+      commit({ ...cur, pending });
+    }
+    owner.current = user.id;
+  }, [user, commit]);
+
   const change = useCallback((id, entry) => {
     const cur = stateRef.current;
     const entries = { ...cur.entries };
@@ -174,6 +189,9 @@ export function SavedProvider({ children }) {
       return before; // for Undo
     },
     restore: (id, entry) => change(id, entry),
+    // log out: the account keeps its saves on the server; this phone starts empty for the next guest
+    clearLocal: () => commit(emptySaved),
+    flush: sync, // send unsent changes now (before logging out)
     sections: (now) => sections(state, now),
   };
   return createElement(SavedContext.Provider, { value: api }, children);

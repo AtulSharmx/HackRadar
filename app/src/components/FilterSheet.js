@@ -7,12 +7,14 @@ import { space, type, useAppTheme } from '../theme';
 import Button from './Button';
 import Chip from './Chip';
 import { Group } from './OnboardingStep';
+import Segmented from './Segmented';
 import Sheet from './Sheet';
 import SwitchRow from './SwitchRow';
 
-const MODES = [['Online', ['online']], ['Offline', ['offline', 'hybrid']], ['Both', ['online', 'offline', 'hybrid']]];
+const MODES = [['online', 'Online'], ['offline', 'Offline'], ['both', 'Both']];
+const MODE_LISTS = { online: ['online'], offline: ['offline', 'hybrid'], both: ['online', 'offline', 'hybrid'] };
 const FEES = [['free', 'Free'], ['paid', 'Paid'], ['both', 'Both']];
-const DISTANCES = [[10, '10 km'], [25, '25 km'], [50, '50 km'], [100, '100 km'], [null, 'Anywhere']];
+const DISTANCES = [[10, '10'], [25, '25'], [50, '50'], [100, '100'], [null, 'Any']];
 const same = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 // Changes stay inside the sheet until "Show N hackathons"; the count updates live.
@@ -28,9 +30,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
   const hasLocation = prefs?.lat != null;
   const fee = feeChoice(f);
   const toggleTheme = (k) => set({ themes: f.themes.includes(k) ? f.themes.filter((t) => t !== k) : [...f.themes, k] });
-  const radio = (selected, label, onPress) => (
-    <Chip key={label} label={label} selected={selected} showRemove={false} role="radio" onPress={onPress} />
-  );
+  const modeKey = Object.keys(MODE_LISTS).find((k) => same(f.modes, MODE_LISTS[k])) || null;
 
   return (
     <Sheet
@@ -52,18 +52,20 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
         </>
       }
     >
-      <Group label="Mode">{MODES.map(([label, modes]) => radio(same(f.modes, modes), label, () => set({ modes })))}</Group>
+      <Group label="Mode">
+        <Segmented options={MODES} value={modeKey} onChange={(k) => set({ modes: MODE_LISTS[k] })} accessibilityLabel="Mode" />
+      </Group>
       <Group label="Fee" note={fee === 'free' ? "Also shows events that don't list a fee." : null}>
-        {FEES.map(([key, label]) => radio(fee === key, label, () => set(FEE_CHOICES[key])))}
+        <Segmented options={FEES} value={fee} onChange={(k) => set(FEE_CHOICES[k])} accessibilityLabel="Fee" />
       </Group>
       <Group label="Themes">
         {THEMES.map(([k, label]) => (
           <Chip key={k} label={label} selected={f.themes.includes(k)} showRemove={false} onPress={() => toggleTheme(k)} />
         ))}
       </Group>
-      <Group label="Distance for offline events">
+      <Group label={hasLocation ? 'Distance for offline events (km)' : 'Distance for offline events'}>
         {hasLocation ? (
-          DISTANCES.map(([km, label]) => radio(f.max_km === km, label, () => set({ max_km: km })))
+          <Segmented options={DISTANCES} value={f.max_km ?? null} onChange={(km) => set({ max_km: km })} accessibilityLabel="Distance for offline events" />
         ) : (
           <View style={styles.noCity}>
             <Text style={[type.body, { color: colors.textSecondary }]}>Set your city to filter by distance.</Text>
