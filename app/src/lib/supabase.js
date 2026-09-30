@@ -1,6 +1,7 @@
 // Supabase client, per Expo's guide (docs.expo.dev/guides/using-supabase, SDK 57):
 // expo-sqlite provides localStorage so the guest session survives app restarts.
 import 'expo-sqlite/localStorage/install';
+import './webcrypto'; // before the client: PKCE needs a real random verifier and SHA-256
 import { createClient } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 

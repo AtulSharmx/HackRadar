@@ -90,11 +90,47 @@ export function paramsOf(url) {
   return out;
 }
 
+// Android can report the browser as closed before the app hears the redirect (the sign-in then stalled and
+// people tapped again), so the redirect is also caught here directly. null: the user closed the browser.
+async function openAndCatch(url, redirect) {
+  let caught = null;
+  const sub = Linking.addEventListener('url', (event) => {
+    if (event.url?.startsWith(redirect)) caught = event.url;
+  });
+  try {
+    const result = await WebBrowser.openAuthSessionAsync(url, redirect);
+    if (result.type === 'success') return result.url;
+    if (!caught) await new Promise((done) => setTimeout(done, 800)); // the redirect can land just after
+    return caught;
+  } finally {
+    sub.remove();
+  }
+}
+
 async function browserRound(request, redirect) {
   const { data, error } = await request;
   if (error) throw error;
-  const result = await WebBrowser.openAuthSessionAsync(data.url, redirect);
-  return result.type === 'success' ? paramsOf(result.url) : null; // null: the user closed the browser
+  const url = await openAndCatch(data.url, redirect);
+  return url ? paramsOf(url) : null;
+}
+
+// Providers whose account already exists (linking it to a guest failed once): go straight to signing in
+// next time, instead of opening the browser twice
+const LINKED_KEY = 'hackradar.linkedProviders.v1';
+function knownAccount(provider) {
+  try {
+    return JSON.parse(globalThis.localStorage?.getItem(LINKED_KEY) || '[]').includes(provider);
+  } catch {
+    return false;
+  }
+}
+function rememberAccount(provider) {
+  try {
+    const list = JSON.parse(globalThis.localStorage?.getItem(LINKED_KEY) || '[]');
+    if (!list.includes(provider)) globalThis.localStorage?.setItem(LINKED_KEY, JSON.stringify([...list, provider]));
+  } catch {
+    // only saves a second browser trip
+  }
 }
 
 // The phone's own Google account picker: only in a development/store build (Expo Go has no native module)
@@ -149,15 +185,18 @@ async function signInInBrowser(provider) {
   const redirectTo = backToApp();
   const options = { redirectTo, skipBrowserRedirect: true };
   let p;
-  if ((await currentUser())?.is_anonymous) {
+  if ((await currentUser())?.is_anonymous && !knownAccount(provider)) {
     const link = await supabase.auth.linkIdentity({ provider, options });
     if (link.error && !cantLink(link.error)) throw link.error;
     if (!link.error) {
-      const result = await WebBrowser.openAuthSessionAsync(link.data.url, redirectTo);
-      if (result.type !== 'success') return null; // closed the browser
-      p = paramsOf(result.url);
+      const url = await openAndCatch(link.data.url, redirectTo);
+      if (!url) return null; // closed the browser
+      p = paramsOf(url);
       // that Google/GitHub account already has a HackRadar account: sign in to it instead
-      if (cantLink({ message: p.error_description, code: p.error_code })) p = null;
+      if (cantLink({ message: p.error_description, code: p.error_code })) {
+        rememberAccount(provider);
+        p = null;
+      }
     }
   }
   if (!p) p = await browserRound(supabase.auth.signInWithOAuth({ provider, options }), redirectTo);
