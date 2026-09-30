@@ -21,7 +21,11 @@ export default function Welcome() {
           Every hackathon you can join, near you or online.
         </Text>
       </View>
-      <Button label="Get started" onPress={() => router.push('/interests')} />
+      <View style={styles.actions}>
+        <Button label="Get started" onPress={() => router.push('/interests')} />
+        {/* a new phone: sign in and the account's feed setup comes back, no onboarding */}
+        <Button label="I already have an account" variant="text" onPress={() => router.push('/account')} />
+      </View>
     </View>
   );
 }
@@ -31,4 +35,5 @@ const styles = StyleSheet.create({
   middle: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   name: { fontSize: 32, lineHeight: 38 },
   line: { textAlign: 'center', fontSize: 16, lineHeight: 22, maxWidth: 280 },
+  actions: { gap: space.xs },
 });

@@ -1,5 +1,4 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import Constants from 'expo-constants';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -25,7 +24,6 @@ const MODES = [['online', 'Online'], ['offline', 'Offline'], ['both', 'Both']];
 const MODE_LISTS = { online: ['online'], offline: ['offline', 'hybrid'], both: ['online', 'offline', 'hybrid'] };
 const FEES = [['free', 'Free only'], ['any', 'Free and paid']];
 const DISTANCES = [[10, '10'], [25, '25'], [50, '50'], [100, '100'], [null, 'Any']];
-const SOURCES = 'Unstop, Devfolio, Hack2Skill'; // collector/adapters, SOURCES in .github/workflows/collect.yml
 const same = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 function Section({ title, children, colors }) {
@@ -50,15 +48,6 @@ function Item({ label, hint, children, colors, last }) {
         {hint ? <Text style={[type.meta, { color: colors.textSecondary }]}>{hint}</Text> : null}
       </View>
       {children}
-    </View>
-  );
-}
-
-function InfoRow({ label, value, colors, last }) {
-  return (
-    <View style={[styles.infoRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]} accessible accessibilityLabel={`${label}, ${value}`}>
-      <Text style={[type.body, { color: colors.textPrimary }]}>{label}</Text>
-      <Text style={[type.body, styles.infoValue, { color: colors.textSecondary }]}>{value}</Text>
     </View>
   );
 }
@@ -246,14 +235,22 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
-        <Section title="ABOUT" colors={colors}>
-          <InfoRow label="Hackathons from" value={SOURCES} colors={colors} />
-          <InfoRow label="Version" value={Constants.expoConfig?.version || '1.0.0'} colors={colors} last />
+        <Section title="MORE" colors={colors}>
+          <Pressable
+            onPress={() => {
+              select();
+              router.push('/about');
+            }}
+            android_ripple={{ color: colors.border }}
+            style={styles.linkRow}
+            accessibilityRole="button"
+            accessibilityLabel="About HackRadar"
+          >
+            <MaterialCommunityIcons name="information-outline" size={22} color={colors.brand} />
+            <Text style={[type.body, styles.linkText, { color: colors.textPrimary }]}>About HackRadar</Text>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
+          </Pressable>
         </Section>
-
-        <Text style={[type.meta, styles.credit, { color: colors.textSecondary }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-          Place search by Photon (komoot) · City data © OpenStreetMap contributors
-        </Text>
       </ScrollView>
 
       <CitySearch
@@ -289,13 +286,12 @@ const styles = StyleSheet.create({
   },
   cityText: { flex: 1 },
   switches: { paddingVertical: space.sm },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 52, paddingVertical: space.sm },
-  infoValue: { flex: 1, textAlign: 'right' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
+  linkText: { flex: 1 },
   account: {
     borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, padding: layout.cardPadding, gap: space.lg,
   },
   accountHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   avatar: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   accountText: { flex: 1, gap: 2 },
-  credit: { textAlign: 'center' },
 });

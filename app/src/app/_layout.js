@@ -30,16 +30,19 @@ function Routes() {
           }}
         />
         <Stack.Screen
-          name="account"
+          name="about"
           options={{
-            title: 'Sign in',
-            animation: 'slide_from_bottom',
+            title: 'About',
+            animation: 'slide_from_right',
             headerStyle: { backgroundColor: colors.background },
             headerShadowVisible: false,
             headerTintColor: colors.textPrimary,
           }}
         />
       </Stack.Protected>
+      {/* reachable before and after onboarding: Welcome's "I already have an account" and Settings */}
+      <Stack.Screen name="account" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="auth-callback" options={{ headerShown: false, animation: 'none' }} />
     </Stack>
   );
 }

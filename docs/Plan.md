@@ -74,8 +74,10 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 ## D. Accounts and settings
 
 - [ ] D1 Google sign-in and email code, linking the guest account (same user id, saves kept).
-  - 30 Sep: email code sign-in + log out built (app/src/app/account.js, lib/account.js). Needs the Supabase
-    email templates to show {{ .Token }} and, for the public, custom SMTP. Google sign-in still to do.
+  - 30 Sep: sign-in screen with Google, GitHub, phone (+91 SMS) and email codes, 30 s resend, log out
+    (app/src/app/account.js, lib/account.js). Methods the server hasn't switched on show "Soon" (read from
+    /auth/v1/settings). Setup left for the owner: Google/GitHub OAuth apps, an SMS provider (+ India DLT),
+    email templates with {{ .Token }}, redirect URLs hackradar://** and exp://**, manual identity linking.
 - [ ] D2 Settings: preferences, location, notifications, hide warnings, privacy notice, Delete my data (in app + web URL).
   - Check: Delete my data removes server rows and returns to onboarding.
 
