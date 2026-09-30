@@ -27,3 +27,7 @@ test('errors in plain words', () => {
   expect(explain({ message: 'Token has expired or is invalid' })).toBe("That code didn't work. Check it, or send a new one.");
   expect(explain({ message: 'For security purposes, you can only request this after 27 seconds.' })).toMatch(/Wait a minute/);
 });
+
+test('manual linking off reads as a setting, not a broken app', () => {
+  expect(explain({ message: 'Manual linking is disabled' }, 'Google')).toMatch(/one more server setting/);
+});

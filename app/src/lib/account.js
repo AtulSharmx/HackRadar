@@ -41,6 +41,9 @@ async function currentUser() {
 }
 
 const already = (error) => /already|registered|exists/i.test(`${error?.message} ${error?.code}`);
+// the server can't attach a new sign-in to the guest (manual linking off, or already taken): sign in instead;
+// the guest's saves still move over (lib/saved.js uploads them on an account change)
+const cantLink = (error) => already(error) || /manual linking|linking is disabled/i.test(`${error?.message} ${error?.code}`);
 // where an emailed link (instead of a code) or a browser sign-in comes back to: this app
 const backToApp = () => Linking.createURL('auth-callback');
 
@@ -114,7 +117,7 @@ async function signInWithGoogleNative({ GoogleSignin, isSuccessResponse }) {
   if ((await currentUser())?.is_anonymous) {
     const { data, error } = await supabase.auth.linkIdentity({ provider: 'google', token });
     if (!error) return data.user;
-    if (!already(error)) throw error;
+    if (!cantLink(error)) throw error;
   }
   const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'google', token });
   if (error) throw error;
@@ -139,10 +142,15 @@ async function signInInBrowser(provider) {
   const options = { redirectTo, skipBrowserRedirect: true };
   let p;
   if ((await currentUser())?.is_anonymous) {
-    p = await browserRound(supabase.auth.linkIdentity({ provider, options }), redirectTo);
-    // that Google/GitHub account already has a HackRadar account: sign in to it instead
-    if (p && already({ message: p.error_description, code: p.error_code })) p = null;
-    else if (p === null) return null;
+    const link = await supabase.auth.linkIdentity({ provider, options });
+    if (link.error && !cantLink(link.error)) throw link.error;
+    if (!link.error) {
+      const result = await WebBrowser.openAuthSessionAsync(link.data.url, redirectTo);
+      if (result.type !== 'success') return null; // closed the browser
+      p = paramsOf(result.url);
+      // that Google/GitHub account already has a HackRadar account: sign in to it instead
+      if (cantLink({ message: p.error_description, code: p.error_code })) p = null;
+    }
   }
   if (!p) p = await browserRound(supabase.auth.signInWithOAuth({ provider, options }), redirectTo);
   if (!p) return null;
