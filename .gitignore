@@ -9,5 +9,7 @@ node_modules/
 dist/
 *.keystore
 *.jks
-google-services.json
+# Firebase service-account keys are secret (upload them on expo.dev, never commit).
+# google-services.json is NOT secret (public identifiers, per Expo docs) and is committed.
+*firebase-adminsdk*.json
 supabase/.temp/
