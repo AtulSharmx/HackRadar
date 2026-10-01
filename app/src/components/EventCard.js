@@ -38,6 +38,7 @@ function Bookmark({ saved, onToggle, title, colors }) {
         }
         onToggle?.();
       }}
+      android_ripple={{ color: colors.border, borderless: true, radius: layout.minTouch / 2 }}
       style={styles.bookmark}
       accessibilityRole="button"
       accessibilityLabel={saved ? `Remove ${title} from saved` : `Save ${title}`}

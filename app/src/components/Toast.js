@@ -65,6 +65,7 @@ export function ToastProvider({ children }) {
                   setToast(null);
                   toast.action.onPress();
                 }}
+                android_ripple={{ color: colors.textSecondary }}
                 style={styles.action}
                 accessibilityRole="button"
                 accessibilityLabel={toast.action.label}

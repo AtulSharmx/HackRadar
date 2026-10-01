@@ -6,6 +6,8 @@ import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, Share, Sty
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Button from '../../components/Button';
+import IconButton from '../../components/IconButton';
+import PressableScale from '../../components/PressableScale';
 import RegisterPrompt from '../../components/RegisterPrompt';
 import Sheet from '../../components/Sheet';
 import { useToast, useToastLift } from '../../components/Toast';
@@ -66,11 +68,7 @@ function useSources(id) {
 }
 
 function HeaderIcon({ icon, label, onPress, color }) {
-  return (
-    <Pressable onPress={onPress} style={styles.headerIcon} accessibilityRole="button" accessibilityLabel={label} hitSlop={4}>
-      <MaterialCommunityIcons name={icon} size={24} color={color} />
-    </Pressable>
-  );
+  return <IconButton icon={icon} label={label} onPress={onPress} color={color} />;
 }
 
 function Row({ label, value, colors }) {
@@ -340,7 +338,7 @@ export default function EventDetail() {
           </Text>
         ) : null}
         <View style={styles.barRow}>
-          <Pressable
+          <PressableScale
             onPress={() => toggleSave(event)}
             style={[styles.saveBtn, { borderColor: colors.brand }]}
             accessibilityRole="button"
@@ -348,7 +346,7 @@ export default function EventDetail() {
             accessibilityState={{ selected: isSaved }}
           >
             <MaterialCommunityIcons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={24} color={colors.brand} />
-          </Pressable>
+          </PressableScale>
           <Button label={applyLabel} onPress={apply} disabled={closed || !linkOk} style={styles.applyBtn} />
         </View>
       </View>

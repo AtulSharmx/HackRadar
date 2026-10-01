@@ -14,7 +14,7 @@ export default function Banner({ icon, text, action }) {
       <MaterialCommunityIcons name={icon} size={20} color={colors.textSecondary} />
       <Text style={[type.body, styles.text, { color: colors.textPrimary }]}>{text}</Text>
       {action ? (
-        <Pressable onPress={action.onPress} style={styles.action} accessibilityRole="button" accessibilityLabel={action.label}>
+        <Pressable onPress={action.onPress} android_ripple={{ color: colors.border }} style={styles.action} accessibilityRole="button" accessibilityLabel={action.label}>
           <Text style={[type.label, { color: colors.brand }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
             {action.label}
           </Text>

@@ -1,10 +1,10 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
-import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { layout, space, type, useAppTheme } from '../theme';
 import Button from './Button';
+import IconButton from './IconButton';
 
 const TOTAL = 5;
 
@@ -17,9 +17,7 @@ export default function OnboardingStep({ step, title, subtitle, children, next, 
       <View style={[styles.top, { paddingTop: insets.top + space.xs }]}>
         {/* steps 2-5 can go back; Android's back button does the same */}
         {step > 1 ? (
-          <Pressable onPress={() => router.back()} style={styles.back} accessibilityRole="button" accessibilityLabel="Back">
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </Pressable>
+          <IconButton icon="arrow-left" label="Back" onPress={() => router.back()} />
         ) : (
           <View style={styles.back} />
         )}
