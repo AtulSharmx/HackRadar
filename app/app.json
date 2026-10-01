@@ -12,7 +12,7 @@
     "android": {
       "package": "com.hackradar.app",
       "adaptiveIcon": {
-        "backgroundColor": "#F7F8FA",
+        "backgroundColor": "#0E7C66",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,7 +26,15 @@
       "expo-status-bar",
       "expo-sqlite",
       "expo-web-browser",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#0E7C66",
+          "defaultChannel": "deadlines"
+        }
+      ]
     ],
     "scheme": "hackradar",
     "extra": {
