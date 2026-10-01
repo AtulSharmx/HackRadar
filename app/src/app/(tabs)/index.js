@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useNavigation } from 'expo-router';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { startTransition, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
   FadeIn, FadeInDown, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withTiming,
@@ -29,6 +29,10 @@ import { useFeed } from '../../lib/useFeed';
 import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../../theme';
 
 const BAR_SPACE = 88; // list bottom padding so the pager clears the floating bar
+// built once, not on every render: cards of a new page fade up in a quick stagger, kept ones glide
+const ENTER = [0, 1, 2, 3, 4, 5].map((i) => FadeInDown.duration(motion.base).delay(i * 18));
+const GLIDE = LinearTransition.duration(motion.base);
+const openEvent = (event) => router.push(`/event/${event.id}`);
 
 function Centered({ icon, text, action, colors }) {
   return (
@@ -89,7 +93,9 @@ export default function FeedScreen() {
   useEffect(() => setFilters(defaults), [defaults]); // prefs changed in Settings -> new defaults
   useToastLift(64); // toasts sit above the floating Filters bar
 
-  const shown = useMemo(() => applyView(events, { query, filters, sort, prefs }), [events, query, filters, sort, prefs]);
+  // typing stays instant: the list catches up with the search box a moment later
+  const search = useDeferredValue(query);
+  const shown = useMemo(() => applyView(events, { query: search, filters, sort, prefs }), [events, search, filters, sort, prefs]);
   const { items, page: current, pages } = pageOf(shown, page);
   const chips = activeChips(filters, !!me);
   const openCity = () => {
@@ -280,16 +286,16 @@ export default function FeedScreen() {
           // cards of a new page (or a new order) fade up in a quick stagger; kept ones glide to their new place
           <Animated.View
             key={item.id}
-            entering={shownOnce.current ? FadeInDown.duration(motion.base).delay(Math.min(i, 5) * 18) : undefined}
-            layout={LinearTransition.duration(motion.base)}
+            entering={shownOnce.current ? ENTER[Math.min(i, 5)] : undefined}
+            layout={GLIDE}
             style={i ? styles.gap : null}
           >
             <EventCard
               event={item}
               km={distanceKm(item, me)}
               saved={saved.isSaved(item.id)}
-              onToggleSave={() => toggleSave(item)}
-              onPress={() => router.push(`/event/${item.id}`)}
+              onToggleSave={toggleSave}
+              onPress={openEvent}
               posted={sort === 'newest' ? item.posted_at || item.first_seen_at : null}
             />
           </Animated.View>
@@ -343,8 +349,8 @@ export default function FeedScreen() {
         onClose={() => setSheet(null)}
         filters={filters}
         onApply={(f) => {
-          setFilters(f);
           setSheet(null);
+          startTransition(() => setFilters(f));
         }}
         onSaveAlert={saveAlert}
         onSetCity={openCity}
@@ -360,8 +366,8 @@ export default function FeedScreen() {
         hasLocation={!!me}
         onSetCity={openCity}
         onPick={(s) => {
-          setSort(s);
-          setSheet(null);
+          setSheet(null); // the sheet answers the tap at once; the re-sorted list follows right after
+          startTransition(() => setSort(s));
         }}
       />
     </View>

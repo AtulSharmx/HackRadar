@@ -1,5 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
+import { useEffect } from 'react';
 
 import { select } from '../../lib/haptics';
 import { useAppTheme } from '../../theme';
@@ -13,6 +14,15 @@ const ICONS = {
 
 export default function TabLayout() {
   const { colors } = useAppTheme();
+  // Saved and Settings are built in the background once the Feed is up, so the first tap on them
+  // switches at once instead of waiting for the whole screen to render (Settings took the longest).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      router.prefetch('/saved');
+      router.prefetch('/settings');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, []);
   return (
     <Tabs
       screenListeners={{ tabPress: () => select() }}
