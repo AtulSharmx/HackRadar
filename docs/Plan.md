@@ -52,7 +52,9 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 
 ## B. Development build and notifications
 
-- [ ] B1 EAS development build (logged in as atulshxrma), install on the phone.
+- [x] B1 EAS development build (logged in as atulshxrma), install on the phone.
+  - 1 Oct: @atulshxrma/hackradar, package com.hackradar.app, dev-client APK installed and working; adds native
+    Google sign-in, expo-crypto (secure PKCE) and expo-intent-launcher (Unstop app hand-off).
   - Check: the app runs from the dev build with the same features as Expo Go.
 - [ ] B2 Reminders: 7 d, 48 h, 24 h before saved deadlines; quiet hours; cancel on unsave; "starts tomorrow" for Registered. Toast text back to the App Flow wording.
   - Check: a test event 25 h away rings the 24 h reminder with the phone locked (Samsung, battery optimisation on and off).
