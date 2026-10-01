@@ -133,3 +133,14 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 - 30 Sep 2026, app round 3 (user asks): light theme only (dark removed, so no theme switch delay or "match
   device" issue); Settings redesigned with every choice in place (chips, and a sliding Segmented control for
   mode, fee and distance, also used in Filters and onboarding); Account card with email-code sign-in and log out.
+- 1 Oct 2026, speed + layout round (user: "app slow, taps late on Best match and the tabs"):
+  - Measured on the web preview (React Profiler, long tasks): opening Sort re-rendered all 10 cards (24 ms,
+    memo defeated by new arrow callbacks) -> 1.3 ms; picking a sort blocked 149 ms -> the sheet closes in
+    ~28 ms and the list follows in a transition; first tap on Settings 101 ms -> tabs prefetched.
+  - The phone runs a development build (JS from Metro, dev mode), several times slower than the app people
+    will install; a "preview" (release) APK is now built for judging speed (EAS env "preview" holds the
+    EXPO_PUBLIC_* config).
+  - Splash showed Expo's default image: expo-splash-screen now uses the HackRadar mark.
+  - Layout audit (mobile-redesign-app, app/design-baseline.json), approved by the user: Feed has one chip
+    row (Filters, Sort, City, then active filters) instead of a floating pill and a city banner; trust shows
+    on a card only for "Check details" and "Warning"; the third tab is "Profile".
