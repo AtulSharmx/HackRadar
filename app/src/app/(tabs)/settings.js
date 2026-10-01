@@ -121,6 +121,7 @@ export default function SettingsScreen() {
   };
 
   const setNotifications = (on) => (on ? turnOnNotifications(patchPrefs, toast) : update({ notifications: false }));
+  const setMatchAlerts = (on) => (on ? turnOnNotifications(patchPrefs, toast, 'match_alerts') : update({ match_alerts: false }));
 
   const confirmLogOut = () => Alert.alert(
     'Log out?',
@@ -217,7 +218,13 @@ export default function SettingsScreen() {
 
         <Section title="NOTIFICATIONS AND FEED" colors={colors}>
           <View style={styles.switches}>
-            <SwitchRow label="Notifications" hint="Reminders before saved deadlines" value={!!prefs.notifications} onChange={setNotifications} />
+            <SwitchRow
+              label="New hackathon alerts"
+              hint="Ones that match your interests. At most twice a day, never 11 pm to 8 am"
+              value={!!(prefs.match_alerts ?? prefs.notifications)}
+              onChange={setMatchAlerts}
+            />
+            <SwitchRow label="Deadline reminders" hint="7 days, 48 h and 24 h before a saved deadline" value={!!prefs.notifications} onChange={setNotifications} />
             <SwitchRow
               label="Hide events with warnings"
               hint="Flagged for a high fee with no prize, no organizer or odd dates"

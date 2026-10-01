@@ -235,6 +235,7 @@ export async function savedPrefsOf(user) {
     lat: data.lat_rounded,
     lng: data.lng_rounded,
     notifications: !!data.alerts_enabled,
+    match_alerts: !!data.alerts_enabled,
   };
 }
 

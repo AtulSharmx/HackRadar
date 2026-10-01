@@ -17,6 +17,12 @@ test('defaults come from my onboarding answers', () => {
   expect(ids(applyView(E, { filters: f, prefs: PREFS, now: NOW }))).toEqual(['b', 'c', 'e']); // AI only, Mumbai too far
 });
 
+test('from a notification: exactly those events, filters and search set aside, still sorted', () => {
+  const f = defaultFilters(PREFS); // would hide a (cybersecurity) and d (Mumbai)
+  const only = new Set(['d', 'a', 'gone']); // 'gone' closed since the push: simply not shown
+  expect(ids(applyView(E, { query: 'zzz', filters: f, sort: 'closing', prefs: PREFS, now: NOW, only }))).toEqual(['a', 'd']);
+});
+
 test('search matches title or organizer', () => {
   const f = defaultFilters({ ...PREFS, themes: [] });
   expect(ids(applyView(E, { query: 'gdg', filters: f, prefs: PREFS, now: NOW }))).toEqual(['b']);

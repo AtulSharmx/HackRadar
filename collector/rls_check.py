@@ -59,6 +59,17 @@ def main() -> int:
         check("insert saved_events with someone else's device_id",
               blocked(a.post("/saved_events", json={"device_id": id_b, "event_id": eid})))
         check("select events without signing in (plain anon)", blocked(plain.get("/events", params={"limit": 1})))
+
+        # push tokens (0014): only register_push_token writes them; nobody reads them
+        token = "ExponentPushToken[rls-check-" + id_a[:8] + "]"
+        check("register own push token (sanity)",
+              a.post("/rpc/register_push_token", json={"p_token": token}).status_code in (200, 204))
+        check("select from push_tokens", blocked(a.get("/push_tokens", params={"limit": 1})))
+        check("insert into push_tokens directly",
+              blocked(b.post("/push_tokens", json={"expo_push_token": token + "x", "user_id": id_b})))
+        check("register a malformed token", a.post("/rpc/register_push_token", json={"p_token": "not a token"}).status_code >= 400)
+        check("register a token without signing in (plain anon)",
+              plain.post("/rpc/register_push_token", json={"p_token": token}).status_code >= 400)
     finally:
         for uid in (id_a, id_b):   # device rows cascade from auth.users
             httpx.delete(f"{URL}/auth/v1/admin/users/{uid}",

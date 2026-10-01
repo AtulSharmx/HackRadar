@@ -94,6 +94,14 @@ function native() {
 }
 
 export const remindersWork = () => !!native();
+export const notificationsModule = native; // push.js registers the push token with the same module
+
+// Android shows nothing posted to a channel that doesn't exist, so both exist before anything arrives.
+// "Deadlines": reminders and saved-event changes. "New hackathons": new-match pushes (collector/notify.py).
+export async function ensureChannels(n) {
+  await n.setNotificationChannelAsync(CHANNEL, { name: 'Deadlines', importance: n.AndroidImportance.HIGH });
+  await n.setNotificationChannelAsync('new_hackathons', { name: 'New hackathons', importance: n.AndroidImportance.DEFAULT });
+}
 
 async function apply(entries, enabled) {
   const n = native();
@@ -103,7 +111,7 @@ async function apply(entries, enabled) {
   const scheduled = (await n.getAllScheduledNotificationsAsync()).map((r) => r.identifier).filter((id) => id.startsWith('rem:'));
   const { cancel, add } = diff(scheduled, wanted);
   for (const id of cancel) await n.cancelScheduledNotificationAsync(id);
-  if (add.length) await n.setNotificationChannelAsync(CHANNEL, { name: 'Deadlines', importance: n.AndroidImportance.HIGH });
+  if (add.length) await ensureChannels(n);
   for (const w of add) {
     await n.scheduleNotificationAsync({
       identifier: w.id,
@@ -118,6 +126,16 @@ let queue = Promise.resolve();
 export function syncReminders(entries, enabled) {
   queue = queue.then(() => apply(entries, enabled)).catch(() => {});
   return queue;
+}
+
+// Where a tapped notification goes (App Flow "Notification flows"): one event opens it; several new
+// matches open the Feed showing only those; "2 saved hackathons changed" opens Saved.
+export function tapTarget(data) {
+  if (!data) return null;
+  const one = data.eventId || (data.ids?.length === 1 ? data.ids[0] : null);
+  if (one) return `/event/${one}`;
+  if (data.ids?.length) return { pathname: '/', params: { from: data.ids.join(',') } };
+  return data.saved ? '/saved' : null;
 }
 
 // Mounted once inside the providers: keeps the phone's schedule equal to Saved (save, unsave, Registered,
@@ -137,11 +155,12 @@ export function useReminders() {
     let handled = null; // the cold-start tap can arrive both ways
     const open = (response) => {
       const req = response?.notification?.request;
-      const id = req?.content?.data?.eventId;
       const key = `${req?.identifier}@${response?.notification?.date}`;
-      if (!id || key === handled) return;
+      const to = tapTarget(req?.content?.data);
+      if (!to || key === handled) return;
       handled = key;
-      router.push(`/event/${id}`);
+      if (typeof to === 'string' && to.startsWith('/event/')) router.push(to);
+      else router.navigate(to); // a tab: go there, don't stack another copy
     };
     const last = n.getLastNotificationResponse();
     if (last) {

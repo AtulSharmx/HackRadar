@@ -18,7 +18,8 @@ export const DEFAULT_PREFS = {
   state: null,
   lat: null, // rounded to 2 decimals (~1 km); raw GPS is never stored (Backend Schema doc)
   lng: null,
-  notifications: false,
+  notifications: false, // deadline reminders on this phone (B2)
+  match_alerts: null, // push for new matching hackathons (B3); null = same as notifications
 };
 
 export const round2 = (x) => (x == null ? null : Math.round(x * 100) / 100);
@@ -38,7 +39,7 @@ export function toDeviceRow(p) {
     state: p.state,
     lat_rounded: round2(p.lat),
     lng_rounded: round2(p.lng),
-    alerts_enabled: !!p.notifications,
+    alerts_enabled: !!(p.match_alerts ?? p.notifications),
   };
 }
 
