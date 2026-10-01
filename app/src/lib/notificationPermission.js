@@ -13,11 +13,12 @@ export async function askNotificationPermission() {
   }
 }
 
-// The Notifications switch, from Settings or a toast's "Turn on": Android asks first; a refusal
-// points to the system settings, where only the person can allow it again.
-export async function turnOnNotifications(update, toast) {
+// A notification switch, from Profile or a toast's "Turn on": Android asks first; a refusal points to
+// the system settings, where only the person can allow it again.
+// key: 'notifications' (deadline reminders) or 'match_alerts' (new hackathon alerts)
+export async function turnOnNotifications(update, toast, key = 'notifications') {
   const granted = await askNotificationPermission();
-  update({ notifications: granted });
+  update({ [key]: granted });
   if (!granted) {
     toast('Notifications are blocked for HackRadar.', { action: { label: 'Open settings', onPress: () => Linking.openSettings() } });
   }

@@ -23,7 +23,7 @@ export default function NotificationsStep() {
   // No city: the Feed shows online events until one is set (feedView.defaultFilters), and the mode picked
   // in step 3 is kept for when it is
   const finish = (notifications) => {
-    save({ ...draft, notifications });
+    save({ ...draft, notifications, match_alerts: notifications }); // "Allow" covers reminders and new-match alerts
     router.replace('/');
   };
 

@@ -1,7 +1,7 @@
 jest.mock('../supabase', () => ({ supabase: {} }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn() } }));
 
-import { diff, outsideQuiet, planFor, reminderWords } from '../reminders';
+import { diff, outsideQuiet, planFor, reminderWords, tapTarget } from '../reminders';
 
 const NOW = new Date('2026-10-01T06:30:00Z').getTime(); // Thu 1 Oct, 12 pm IST
 const at = (iso) => new Date(iso).getTime();
@@ -48,4 +48,13 @@ test('diff cancels what is no longer wanted and adds only what is missing', () =
   const want = [{ id: 'rem:a:24h:1' }, { id: 'rem:b:7d:2' }];
   expect(diff(['rem:a:24h:1', 'rem:old:7d:0'], want)).toEqual({ cancel: ['rem:old:7d:0'], add: [{ id: 'rem:b:7d:2' }] });
   expect(diff(['rem:a:24h:1'], [])).toEqual({ cancel: ['rem:a:24h:1'], add: [] }); // notifications off or logged out
+});
+
+test('a tapped notification opens the right place', () => {
+  expect(tapTarget({ eventId: 'e1' })).toBe('/event/e1'); // reminder or a saved event that changed
+  expect(tapTarget({ kind: 'new_match', ids: ['e2'] })).toBe('/event/e2');
+  expect(tapTarget({ kind: 'new_match', ids: ['a', 'b'] })).toEqual({ pathname: '/', params: { from: 'a,b' } });
+  expect(tapTarget({ kind: 'change', saved: true })).toBe('/saved');
+  expect(tapTarget({})).toBe(null);
+  expect(tapTarget(undefined)).toBe(null);
 });

@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import config, geocode, health, notify, quality
+from . import config, geocode, health, notify, push, quality
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -95,8 +95,14 @@ def main() -> int:
         print(f"geocode: {geocode.run(db)}")
     except Exception:
         traceback.print_exc()
+    try:   # last run's push receipts first: a dead token is dropped before anything is sent to it
+        print(f"push receipts: {push.check_receipts(db)}")
+    except Exception:
+        traceback.print_exc()
     try:   # after geocoding, so new offline events already have a distance
-        print(f"telegram: {notify.new_matches(db, new_ids)} new matches, {notify.saved_changes(db)} saved-event changes")
+        print(f"telegram: {notify.new_matches(db, new_ids)} new matches")
+        print(f"push: {notify.push_new_matches(db, new_ids)} new-match pushes")
+        print(f"saved-event change alerts: {notify.saved_changes(db)}")
     except Exception:
         traceback.print_exc()
     try:   # a broken health check must not fail an otherwise good run

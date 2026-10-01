@@ -95,10 +95,13 @@ const byDeadline = (a, b) => {
 };
 
 // Search (title + organizer) -> filters -> sort. Returns the list the Feed renders.
-export function applyView(events, { query = '', filters, sort = 'best', prefs, now = new Date() }) {
+// only: a Set of event ids from a tapped notification; then exactly those show (search and filters
+// don't apply: the collector already matched them to this person), in the chosen order.
+export function applyView(events, { query = '', filters, sort = 'best', prefs, now = new Date(), only = null }) {
   const device = asDevice(prefs, filters);
   const q = query.trim().toLowerCase();
   let list = events.filter((e) => {
+    if (only) return only.has(e.id);
     if (q && !`${e.title} ${e.organizer || ''}`.toLowerCase().includes(q)) return false;
     return matches(e, device, now);
   });

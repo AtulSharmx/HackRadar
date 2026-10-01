@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { router, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { startTransition, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
@@ -92,9 +92,18 @@ export default function FeedScreen() {
   const [sheet, setSheet] = useState(null); // 'filters' | 'sort' | 'city' | null
   useEffect(() => setFilters(defaults), [defaults]); // prefs changed in Settings -> new defaults
 
+  // A tapped "3 new hackathons match" push opens the Feed with ?from=<ids>: only those show until the
+  // "From notification" chip is removed (App Flow "Notification flows")
+  const { from } = useLocalSearchParams();
+  const only = useMemo(() => (from ? new Set(String(from).split(',')) : null), [from]);
+  const clearFrom = () => router.setParams({ from: undefined });
+
   // typing stays instant: the list catches up with the search box a moment later
   const search = useDeferredValue(query);
-  const shown = useMemo(() => applyView(events, { query: search, filters, sort, prefs }), [events, search, filters, sort, prefs]);
+  const shown = useMemo(
+    () => applyView(events, { query: search, filters, sort, prefs, only }),
+    [events, search, filters, sort, prefs, only],
+  );
   const { items, page: current, pages } = pageOf(shown, page);
   const chips = activeChips(filters, !!me);
   const openCity = () => setSheet('city'); // one sheet at a time: this also closes Filters or Sort
@@ -111,7 +120,7 @@ export default function FeedScreen() {
     }
     setPage(1);
     toTop(false);
-  }, [sort, filters, query]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sort, filters, query, only]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // cards are on screen at once when the app opens; only a new page or order fades them in
   const shownOnce = useRef(false);
@@ -168,7 +177,17 @@ export default function FeedScreen() {
   const nothingOpen = events.length === 0;
 
   let empty = null;
-  if (!shown.length) {
+  if (!shown.length && only) {
+    // the events from the push closed or were removed since (App Flow: "That event is no longer listed")
+    empty = (
+      <Centered
+        icon="calendar-remove-outline"
+        text="Those hackathons are no longer listed."
+        colors={colors}
+        action={<Button label="Show all hackathons" variant="secondary" onPress={clearFrom} style={styles.centerAction} />}
+      />
+    );
+  } else if (!shown.length) {
     empty = nothingOpen ? (
       // never pretend there are simply no hackathons (App Flow, edge case 5)
       <Centered icon="radar" text="No new events found recently. We're checking the sources." colors={colors} />
@@ -232,6 +251,9 @@ export default function FeedScreen() {
         style={styles.chipsBar}
         contentContainerStyle={styles.chips}
       >
+        {only ? ( // first, so it is clear why only a few events show
+          <Chip label="From notification" selected soft accessibilityLabel="From notification. Show all hackathons" onPress={clearFrom} />
+        ) : null}
         <Chip
           role="button"
           icon="tune-variant"
@@ -248,7 +270,7 @@ export default function FeedScreen() {
           accessibilityLabel={me ? `City, ${prefs.city || 'set'}. Change` : 'Set your city to see offline hackathons near you'}
           onPress={openCity}
         />
-        {chips.map((c) => (
+        {only ? null : chips.map((c) => (
           <Animated.View key={c.key} entering={CHIP_IN} exiting={CHIP_OUT} layout={GLIDE}>
             <Chip label={c.label} selected soft accessibilityLabel={`${c.label}. Remove filter`} onPress={() => setFilters(c.clear(filters))} />
           </Animated.View>

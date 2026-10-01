@@ -1,17 +1,22 @@
-"""Telegram alerts for the Telegram-only phase (Stage 4): new matching events + changes to saved events.
+"""Alerts: new matching events + changes to saved events.
 
-Goes to devices with alerts on, no Expo push token and prefs.telegram = true (my own row). Once the app registers a push token for a
-device, that device gets push instead (step 34) and these Telegram match alerts stop (step 37).
+Push (B3, docs/superpowers/specs/2026-10-01-b3-push-design.md): devices with alerts on and a token in
+push_tokens. New matches go out grouped, never in the device's quiet hours and never within 4 h of the
+last one (they wait in pending_digest), so the 6-hourly run gives at most 2 a day.
+Telegram: only the admin's own row marked prefs.telegram = true (B5 removes these match alerts).
 Every line is built from the stored event, never from fixed placeholder text.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from . import match
+from . import match, push
 from .normalize import IST
 from .telegram import esc, send
 
 CHANGE_PUSH_FIELDS = {"registration_deadline", "venue_address", "city"}   # TRD: other changes don't alert
 LIMIT = 3900   # Telegram max is 4096 chars per message
+NEW_CHANNEL, CHANGE_CHANNEL = "new_hackathons", "deadlines"   # Android channels the app creates
+GAP = timedelta(hours=4)   # at most one new-match push per device in this window
+DEFAULT_QUIET = (23 * 60, 8 * 60)   # IST minutes, same defaults as devices.quiet_start_min / quiet_end_min
 
 
 def _when(v) -> str:
@@ -90,13 +95,147 @@ def new_matches(db, new_ids: list[str], now: datetime | None = None) -> int:
     return sent
 
 
-def saved_changes(db) -> int:
-    """Alert about deadline/venue changes on saved events, then mark every pending change as handled."""
+def in_quiet(now: datetime, dev: dict) -> bool:
+    t = now.astimezone(IST)
+    m = t.hour * 60 + t.minute
+    s = dev.get("quiet_start_min", DEFAULT_QUIET[0])
+    e = dev.get("quiet_end_min", DEFAULT_QUIET[1])
+    if s == e:
+        return False
+    return s <= m or m < e if s > e else s <= m < e   # s > e: the window crosses midnight
+
+
+def _day(v) -> str:
+    d = datetime.fromisoformat(v).astimezone(IST)
+    return f"{d:%a} {d.day} {d:%b}"   # "Fri 3 Oct"
+
+
+def _short(text: str, n: int = 60) -> str:
+    return text if len(text) <= n else text[:n - 1].rstrip() + "…"
+
+
+def match_message(events: list[dict], dev: dict) -> dict:
+    """One grouped push for a device's new matches (already sorted best first)."""
+    if len(events) == 1:
+        e = events[0]
+        closes = f"Closes {_day(e['registration_deadline'])}" if e.get("registration_deadline") else "Deadline not listed"
+        return {"title": f"New hackathon for you: {_short(e['title'])}",
+                "body": " · ".join((closes, _where(e, dev), _fee(e))),
+                "data": {"kind": "new_match", "ids": [e["id"]]}, "channelId": NEW_CHANNEL}
+    more = len(events) - 3
+    return {"title": f"{len(events)} new hackathons match",
+            "body": ", ".join(_short(e["title"], 40) for e in events[:3]) + (f" and {more} more" if more > 0 else ""),
+            "data": {"kind": "new_match", "ids": [e["id"] for e in events[:30]]},   # 30 ids stay far under 4 KB
+            "channelId": NEW_CHANNEL}
+
+
+def change_message(items: list[tuple[dict, dict]]) -> dict:
+    """items: (event, change) for one device's saved events that changed in this run."""
+    if len(items) > 1:
+        return {"title": f"{len(items)} saved hackathons changed",
+                "body": ", ".join(_short(e["title"], 40) for e, _ in items[:3]),
+                "data": {"kind": "change", "saved": True}, "channelId": CHANGE_CHANNEL, "priority": "high"}
+    e, c = items[0]
+    fields = CHANGE_PUSH_FIELDS & set(c["changed_fields"])
+    f = next(x for x in ("registration_deadline", "venue_address", "city") if x in fields)
+    old, new = c["old_values"].get(f), c["new_values"].get(f)
+    if f == "registration_deadline":
+        show = _when if old and new and _day(old) == _day(new) else _day   # same day: the time is what moved
+        title = f"Deadline changed: {_short(e['title'])}"
+        body = (f"Now closes {show(new)}" if new else "The deadline is no longer listed") + (f" (was {show(old)})." if old else ".")
+    else:
+        title = f"Venue changed: {_short(e['title'])}"
+        body = f"Now at {new or 'a venue not listed yet'}" + (f" (was {old})." if old else ".")
+    return {"title": title, "body": body, "data": {"kind": "change", "eventId": e["id"]},
+            "channelId": CHANGE_CHANNEL, "priority": "high"}
+
+
+def _events(db, ids) -> dict:
+    ids, out = sorted(set(ids)), {}
+    for i in range(0, len(ids), 100):   # keep the URL short
+        out.update({e["id"]: e for e in db.select_all("events", select="*", id=f"in.({','.join(ids[i:i + 100])})")})
+    return out
+
+
+def push_devices(db) -> list[tuple[dict, list[str]]]:
+    """(device, its tokens) for devices with alerts on and at least one phone registered. A device with
+    no themes in its filter is skipped: an empty filter would match every event."""
+    tokens: dict[str, list[str]] = {}
+    for t in db.select_all("push_tokens", select="expo_push_token,user_id"):
+        tokens.setdefault(t["user_id"], []).append(t["expo_push_token"])
+    if not tokens:
+        return []
+    return [(d, tokens[d["id"]]) for d in db.select_all("devices", select="*", alerts_enabled="is.true")
+            if d["id"] in tokens and match.filter_of(d).get("themes")]
+
+
+def push_new_matches(db, new_ids: list[str], now: datetime | None = None) -> int:
+    """One grouped push per device: this run's matches plus the ones held back earlier."""
+    now = now or datetime.now(timezone.utc)
+    devices = push_devices(db)
+    if not devices:
+        return 0
+    held: dict[str, list[str]] = {}
+    for p in db.select_all("pending_digest", select="device_id,event_id"):
+        held.setdefault(p["device_id"], []).append(p["event_id"])
+    events = _events(db, list(new_ids) + [i for ids in held.values() for i in ids])
+    recent = {t["device_id"] for t in db.select_all("push_tickets", select="device_id", kind="eq.new_match",
+                                                     sent_at=f"gte.{(now - GAP).isoformat()}")}
+    outgoing, queue, flushed = [], [], []
+    for dev, tokens in devices:
+        hits = [events[i] for i in new_ids if i in events and match.matches(events[i], dev, now)]
+        if in_quiet(now, dev) or dev["id"] in recent:
+            queue += [{"device_id": dev["id"], "event_id": e["id"]} for e in hits]
+            continue
+        waiting = [events[i] for i in held.get(dev["id"], []) if i in events and match.matches(events[i], dev, now)]
+        if dev["id"] in held:
+            flushed.append(dev["id"])   # sent now, or closed / no longer matching: either way done
+        both = list({e["id"]: e for e in waiting + hits}.values())
+        if not both:
+            continue
+        both.sort(key=lambda e: (-match.score(e, dev, now)[0], e.get("registration_deadline") or "9999"))
+        msg = match_message(both, dev)
+        outgoing += [(dev["id"], "new_match", {**msg, "to": t}) for t in tokens]
+    db.post("pending_digest", queue, on_conflict="device_id,event_id")
+    for dev_id in flushed:
+        db.http.delete("/pending_digest", params={"device_id": f"eq.{dev_id}"}).raise_for_status()
+    return push.deliver(db, outgoing) if outgoing else 0
+
+
+def _push_changes(db, pending: list[dict]) -> int:
+    devices = push_devices(db)
+    if not devices:
+        return 0
+    ids = {c["event_id"] for c in pending if CHANGE_PUSH_FIELDS & set(c["changed_fields"])}
+    if not ids:
+        return 0
+    events = _events(db, ids)
+    saved = db.select_all("saved_events", select="device_id,event_id", event_id=f"in.({','.join(sorted(ids))})")
+    outgoing = []
+    for dev, tokens in devices:
+        mine = {s["event_id"] for s in saved if s["device_id"] == dev["id"]}
+        latest = {}   # one line per event: its latest change in this batch
+        for c in pending:
+            if c["event_id"] in mine and c["event_id"] in events and CHANGE_PUSH_FIELDS & set(c["changed_fields"]):
+                latest[c["event_id"]] = (events[c["event_id"]], c)
+        if latest:
+            msg = change_message(list(latest.values()))
+            outgoing += [(dev["id"], "change", {**msg, "to": t}) for t in tokens]
+    return push.deliver(db, outgoing) if outgoing else 0
+
+
+def saved_changes(db, now: datetime | None = None) -> int:
+    """Alert about deadline/venue changes on saved events, then mark every pending change as handled.
+    Between 11 pm and 8 am IST nothing is sent and nothing is marked: the next run handles them.
+    ponytail: one quiet window for every device; per-device quiet hours for changes come with B4."""
+    now = now or datetime.now(timezone.utc)
+    if in_quiet(now, {}):
+        return 0
     pending = db.select_all("event_changes", select="*", notified="is.false", order="changed_at")
     if not pending:
         return 0
     devices = {d["id"]: d for d in telegram_devices(db)}
-    sent = 0
+    sent = _push_changes(db, pending)
     if devices:
         ids = ",".join({c["event_id"] for c in pending})
         saved = db.select_all("saved_events", select="device_id,event_id", event_id=f"in.({ids})")
