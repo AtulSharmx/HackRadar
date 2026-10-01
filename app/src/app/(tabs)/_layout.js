@@ -9,7 +9,7 @@ import { useAppTheme } from '../../theme';
 const ICONS = {
   index: ['radar', 'radar'],
   saved: ['bookmark-outline', 'bookmark'],
-  settings: ['cog-outline', 'cog'],
+  settings: ['account-circle-outline', 'account-circle'],
 };
 
 export default function TabLayout() {
@@ -44,7 +44,9 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="index" options={{ title: 'Feed', headerTitle: 'HackRadar' }} />
       <Tabs.Screen name="saved" options={{ title: 'Saved' }} />
-      <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+      {/* "Profile": it holds the account and my feed preferences (user's choice, 1 Oct). The route stays
+          /settings so links and saved navigation keep working. */}
+      <Tabs.Screen name="settings" options={{ title: 'Profile' }} />
     </Tabs>
   );
 }

@@ -1,0 +1,131 @@
+{
+  "tool": "mobile-redesign-app",
+  "version": 1,
+  "date": "2026-10-01",
+  "passes": [
+    "static (tells grep + code)",
+    "live (Expo web preview, 375 px phone viewport)"
+  ],
+  "designScore": "A-",
+  "slopScore": "A",
+  "categories": {
+    "navigation": "B",
+    "screenAnatomy": "B",
+    "typography": "A",
+    "color": "A-",
+    "surfaces": "A-",
+    "states": "A",
+    "interaction": "A",
+    "forms": "A",
+    "performance": "A",
+    "copy": "A-"
+  },
+  "findings": [
+    {
+      "id": "FINDING-001",
+      "impact": "high",
+      "category": "interaction",
+      "status": "fixed",
+      "summary": "Taps felt late: opening Sort re-rendered all 10 feed cards (memo defeated by inline callbacks), picking a sort blocked the JS thread 149 ms, first tap on Settings built the whole screen (101 ms). Fixed in 5b232e4."
+    },
+    {
+      "id": "FINDING-002",
+      "impact": "medium",
+      "category": "screenAnatomy",
+      "status": "fixed",
+      "summary": "Splash showed Expo's default image instead of the HackRadar mark (no expo-splash-screen config). Fixed in 5b232e4, visible from the next build."
+    },
+    {
+      "id": "FINDING-003",
+      "impact": "medium",
+      "category": "screenAnatomy",
+      "status": "fixed",
+      "summary": "Feed: about 30% of the screen is chrome before the first card (title, 2-line city banner, search, filter chips)."
+    },
+    {
+      "id": "FINDING-004",
+      "impact": "medium",
+      "category": "navigation",
+      "status": "fixed",
+      "tell": 7,
+      "summary": "Filters and Sort live in a floating pill that covers cards and the pager and hides on scroll; Indian shopping/food apps put Filters and Sort at the start of the chip row under search."
+    },
+    {
+      "id": "FINDING-005",
+      "impact": "medium",
+      "category": "screenAnatomy",
+      "status": "fixed",
+      "summary": "No-city state is a permanent 2-line banner; location belongs in one tappable place (a city chip in the row)."
+    },
+    {
+      "id": "FINDING-006",
+      "impact": "medium",
+      "category": "color",
+      "status": "fixed",
+      "summary": "Default filter chips (AI/ML, Online only) are solid brand teal, the loudest thing on the Feed, louder than the red 'closes soon' countdowns."
+    },
+    {
+      "id": "FINDING-007",
+      "impact": "medium",
+      "category": "surfaces",
+      "status": "fixed",
+      "tell": 10,
+      "summary": "A green 'trusted' shield sits on almost every card next to the bookmark; a mark on every row carries no information. Show trust only when it needs attention."
+    },
+    {
+      "id": "FINDING-008",
+      "impact": "medium",
+      "category": "navigation",
+      "status": "fixed",
+      "tell": 25,
+      "summary": "Third tab is 'Settings' but holds the account and the person's feed preferences: it is a Profile, not settings."
+    },
+    {
+      "id": "FINDING-009",
+      "impact": "medium",
+      "category": "copy",
+      "status": "dismissed",
+      "summary": "Fee choice says 'Free only / Free and paid' in Settings but 'Free / Paid / Both' in Filters. Kept: Profile sets a default (2 choices), Filters is a one-off view (3 choices)."
+    },
+    {
+      "id": "FINDING-010",
+      "impact": "polish",
+      "category": "performance",
+      "status": "open",
+      "summary": "Tabs are the JS bottom tabs; NativeTabs is still 'unstable' on SDK 57, so kept (tab switches are instant after the prefetch fix)."
+    }
+  ],
+  "dismissed": [
+    "tell 13 ScrollView+map: feed is paged at 10, saved lists are short, the rest are fixed option lists",
+    "tell 32 Alert.alert: only the Log out confirm (destructive)",
+    "tell 5 shadowColor: theme token pairs it with elevation"
+  ],
+  "unverified": [
+    "scroll performance on the phone",
+    "1.3x font scale",
+    "Android edge-to-edge on the release build",
+    "splash on the release build"
+  ],
+  "after": {
+    "designScore": "A",
+    "slopScore": "A",
+    "categories": {
+      "navigation": "A",
+      "screenAnatomy": "A",
+      "typography": "A",
+      "color": "A",
+      "surfaces": "A",
+      "states": "A",
+      "interaction": "A",
+      "forms": "A",
+      "performance": "A",
+      "copy": "A"
+    },
+    "measured": {
+      "firstCardTop": "30% -> 23% of the screen (web preview, 375x812)",
+      "openSortCardsRender": "23.9 ms -> 1.3 ms",
+      "pickSortBlockingTask": "149 ms -> sheet closes in ~28 ms, list renders after in a transition",
+      "firstTapOnProfile": "101 ms -> no long task (prefetched)"
+    }
+  }
+}

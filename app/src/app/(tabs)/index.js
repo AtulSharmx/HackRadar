@@ -1,21 +1,20 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useNavigation } from 'expo-router';
 import { startTransition, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, {
-  FadeIn, FadeInDown, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withTiming,
-} from 'react-native-reanimated';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Banner from '../../components/Banner';
 import Button from '../../components/Button';
 import Chip from '../../components/Chip';
+import CitySearch from '../../components/CitySearch';
 import EventCard from '../../components/EventCard';
 import FilterSheet from '../../components/FilterSheet';
 import IconButton from '../../components/IconButton';
 import PressableScale from '../../components/PressableScale';
 import SkeletonCard from '../../components/SkeletonCard';
 import SortSheet from '../../components/SortSheet';
-import { useToast, useToastLift } from '../../components/Toast';
+import { useToast } from '../../components/Toast';
 import { activeChips, applyView, clearedFilters, defaultFilters, pageOf, SORTS } from '../../lib/feedView';
 import { ago } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
@@ -28,10 +27,11 @@ import { supabase } from '../../lib/supabase';
 import { useFeed } from '../../lib/useFeed';
 import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../../theme';
 
-const BAR_SPACE = 88; // list bottom padding so the pager clears the floating bar
 // built once, not on every render: cards of a new page fade up in a quick stagger, kept ones glide
 const ENTER = [0, 1, 2, 3, 4, 5].map((i) => FadeInDown.duration(motion.base).delay(i * 18));
 const GLIDE = LinearTransition.duration(motion.base);
+const CHIP_IN = FadeIn.duration(motion.fast);
+const CHIP_OUT = FadeOut.duration(motion.fast);
 const openEvent = (event) => router.push(`/event/${event.id}`);
 
 function Centered({ icon, text, action, colors }) {
@@ -74,12 +74,12 @@ function Pager({ page, pages, onGo, colors }) {
 }
 
 export default function FeedScreen() {
-  const { colors, elevation } = useAppTheme();
+  const { colors } = useAppTheme();
   const navigation = useNavigation();
   const toast = useToast();
   const { user } = useSession();
   const { events, fetchedAt, hasCache, syncing, error, refresh } = useFeed();
-  const { prefs } = usePrefs();
+  const { prefs, update } = usePrefs();
   const saved = useSaved();
   const toggleSave = useSaveToggle();
   const me = prefs?.lat != null ? { lat: prefs.lat, lng: prefs.lng } : null;
@@ -89,31 +89,20 @@ export default function FeedScreen() {
   const [sort, setSort] = useState('best');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [sheet, setSheet] = useState(null); // 'filters' | 'sort' | null
+  const [sheet, setSheet] = useState(null); // 'filters' | 'sort' | 'city' | null
   useEffect(() => setFilters(defaults), [defaults]); // prefs changed in Settings -> new defaults
-  useToastLift(64); // toasts sit above the floating Filters bar
 
   // typing stays instant: the list catches up with the search box a moment later
   const search = useDeferredValue(query);
   const shown = useMemo(() => applyView(events, { query: search, filters, sort, prefs }), [events, search, filters, sort, prefs]);
   const { items, page: current, pages } = pageOf(shown, page);
   const chips = activeChips(filters, !!me);
-  const openCity = () => {
-    setSheet(null);
-    router.navigate({ pathname: '/settings', params: { open: 'city', at: String(Date.now()) } });
-  };
+  const openCity = () => setSheet('city'); // one sheet at a time: this also closes Filters or Sort
 
-  // Floating "Filters · Sort" bar hides while scrolling down, returns on scroll up (animated on the UI thread)
-  const hidden = useSharedValue(0);
-  const lastY = useRef(0);
   const listRef = useRef(null);
-  const toTop = (animated) => {
-    listRef.current?.scrollTo({ y: 0, animated });
-    lastY.current = 0;
-    hidden.value = withTiming(0, { duration: motion.base });
-  };
+  const toTop = (animated) => listRef.current?.scrollTo({ y: 0, animated });
 
-  // A new sort, filter or search starts again at page 1, at the top, with the bar in view
+  // A new sort, filter or search starts again at page 1, at the top
   const firstView = useRef(true);
   useEffect(() => {
     if (firstView.current) {
@@ -134,17 +123,6 @@ export default function FeedScreen() {
     select();
     setPage(n);
     toTop(true);
-  };
-
-  const barStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: hidden.value * 120 }],
-    opacity: 1 - hidden.value,
-  }));
-  const onScroll = (e) => {
-    const y = e.nativeEvent.contentOffset.y;
-    if (y > lastY.current + 8 && y > 80) hidden.value = withTiming(1, { duration: motion.base });
-    else if (y < lastY.current - 8 || y < 80) hidden.value = withTiming(0, { duration: motion.base });
-    lastY.current = y;
   };
 
   // brief: sync indicator on the right of the header
@@ -215,13 +193,6 @@ export default function FeedScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
       {error ? <Banner icon="wifi-off" text={`Offline. Showing events from ${ago(fetchedAt)}.`} /> : null}
-      {!me && !error ? (
-        <Banner
-          icon="map-marker-off-outline"
-          text="Showing online hackathons. Set your city to see offline ones near you."
-          action={{ label: 'Set city', onPress: openCity }}
-        />
-      ) : null}
 
       <View style={styles.searchWrap}>
         <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -252,23 +223,43 @@ export default function FeedScreen() {
         </View>
       </View>
 
-      {chips.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsBar} contentContainerStyle={styles.chips}>
-          {chips.map((c) => (
-            <Animated.View key={c.key} entering={FadeIn.duration(motion.fast)} exiting={FadeOut.duration(motion.fast)} layout={LinearTransition.duration(motion.base)}>
-              <Chip label={c.label} selected onPress={() => setFilters(c.clear(filters))} />
-            </Animated.View>
-          ))}
-        </ScrollView>
-      ) : null}
+      {/* One row, the way shopping and food apps do it: what opens something first (Filters, Sort, City),
+          then the filters that are on, each removable with one tap */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        style={styles.chipsBar}
+        contentContainerStyle={styles.chips}
+      >
+        <Chip
+          role="button"
+          icon="tune-variant"
+          label={chips.length ? `Filters · ${chips.length}` : 'Filters'}
+          accessibilityLabel={`Filters, ${chips.length} on`}
+          onPress={() => setSheet('filters')}
+        />
+        <Chip role="button" icon="sort" endIcon="chevron-down" label={sortLabel} accessibilityLabel={`Sort, ${sortLabel}`} onPress={() => setSheet('sort')} />
+        <Chip
+          role="button"
+          icon={me ? 'map-marker-outline' : 'map-marker-plus-outline'}
+          endIcon={me ? 'chevron-down' : undefined}
+          label={me ? prefs.city || 'Your location' : 'Set city'}
+          accessibilityLabel={me ? `City, ${prefs.city || 'set'}. Change` : 'Set your city to see offline hackathons near you'}
+          onPress={openCity}
+        />
+        {chips.map((c) => (
+          <Animated.View key={c.key} entering={CHIP_IN} exiting={CHIP_OUT} layout={GLIDE}>
+            <Chip label={c.label} selected soft accessibilityLabel={`${c.label}. Remove filter`} onPress={() => setFilters(c.clear(filters))} />
+          </Animated.View>
+        ))}
+      </ScrollView>
 
       <ScrollView
         ref={listRef}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.list, { paddingBottom: BAR_SPACE }, !shown.length && styles.grow]}
+        contentContainerStyle={[styles.list, !shown.length && styles.grow]}
         refreshControl={(
           <RefreshControl
             refreshing={syncing}
@@ -310,40 +301,6 @@ export default function FeedScreen() {
         ) : null}
       </ScrollView>
 
-      <Animated.View style={[styles.barWrap, barStyle]} pointerEvents="box-none">
-        <View style={[styles.bar, elevation.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Pressable
-            onPress={() => {
-              tap();
-              setSheet('filters');
-            }}
-            android_ripple={{ color: colors.border }}
-            style={styles.barHalf}
-            accessibilityRole="button"
-            accessibilityLabel={`Filters, ${chips.length} active`}
-          >
-            <MaterialCommunityIcons name="tune-variant" size={20} color={colors.brand} />
-            <Text style={[type.label, { color: colors.textPrimary }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>
-              {chips.length ? `Filters · ${chips.length}` : 'Filters'}
-            </Text>
-          </Pressable>
-          <View style={[styles.barDivider, { backgroundColor: colors.border }]} />
-          <Pressable
-            onPress={() => {
-              tap();
-              setSheet('sort');
-            }}
-            android_ripple={{ color: colors.border }}
-            style={styles.barHalf}
-            accessibilityRole="button"
-            accessibilityLabel={`Sort, ${sortLabel}`}
-          >
-            <MaterialCommunityIcons name="sort" size={20} color={colors.brand} />
-            <Text style={[type.label, { color: colors.textPrimary }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{sortLabel}</Text>
-          </Pressable>
-        </View>
-      </Animated.View>
-
       <FilterSheet
         visible={sheet === 'filters'}
         onClose={() => setSheet(null)}
@@ -370,13 +327,27 @@ export default function FeedScreen() {
           startTransition(() => setSort(s));
         }}
       />
+      <CitySearch
+        visible={sheet === 'city'}
+        onClose={() => setSheet(null)}
+        onPick={(p) => {
+          update(p);
+          setSheet(null);
+          toast(p.city ? `Location set to ${p.city}.` : 'Location set.');
+        }}
+        onRemove={prefs?.city ? () => {
+          update({ city: null, state: null, lat: null, lng: null });
+          setSheet(null);
+          toast('Location removed. The Feed shows online events.');
+        } : null}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  list: { padding: layout.screenPadding },
+  list: { padding: layout.screenPadding, paddingBottom: space.xxl },
   grow: { flexGrow: 1 },
   gap: { marginTop: layout.cardGap },
   sync: { marginRight: layout.screenPadding },
@@ -401,11 +372,4 @@ const styles = StyleSheet.create({
   pageBtnOff: { opacity: 0.35 },
   pageText: { flex: 1, textAlign: 'center', fontVariant: ['tabular-nums'] },
   footer: { textAlign: 'center', marginTop: space.lg },
-  barWrap: { position: 'absolute', left: 0, right: 0, bottom: space.lg, alignItems: 'center' },
-  bar: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: radius.pill,
-    borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden',
-  },
-  barHalf: { flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: layout.minTouch, paddingHorizontal: space.lg },
-  barDivider: { width: StyleSheet.hairlineWidth, height: 24 },
 });

@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
@@ -99,15 +99,9 @@ export default function SettingsScreen() {
   const { prefs, save, update: patchPrefs } = usePrefs();
   const saved = useSaved();
   const toast = useToast();
-  const params = useLocalSearchParams();
   const [cityOpen, setCityOpen] = useState(false);
   const [lastThemeNote, setLastThemeNote] = useState(false);
   const [leaving, setLeaving] = useState(false);
-
-  // Feed's "Set city" opens the city search straight away (a new "at" each time it's tapped)
-  useEffect(() => {
-    if (params.open === 'city') setCityOpen(true);
-  }, [params.open, params.at]);
 
   if (!prefs) return null; // onboarding not finished: this tab isn't reachable then
   const update = (patch) => save({ ...prefs, ...patch });

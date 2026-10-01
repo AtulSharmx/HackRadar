@@ -108,7 +108,14 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
           <Text style={[type.countdown, { color: toneColor }]}>{cd.text}</Text>
         </View>
         <View style={styles.row1Right}>
-          <MaterialCommunityIcons name={trust.icon} size={20} color={colors[trust.tone]} />
+          {/* trust shows only when it needs a look (9 in 10 events are from trusted sources, so a mark on
+              every card said nothing); icon + word, never colour alone. "Outdated" is already the countdown. */}
+          {trust === TRUST.check_details || trust === TRUST.warning ? (
+            <View style={styles.flag}>
+              <MaterialCommunityIcons name={trust.icon} size={16} color={colors[trust.tone]} />
+              <Text style={[type.meta, styles.flagWord, { color: colors[trust.tone] }]} numberOfLines={1}>{trust.word}</Text>
+            </View>
+          ) : null}
           {onToggleSave ? <Bookmark saved={saved} onToggle={() => onToggleSave(event)} title={event.title} colors={colors} /> : null}
         </View>
       </View>
@@ -148,6 +155,8 @@ const styles = StyleSheet.create({
   countdown: { flexDirection: 'row', alignItems: 'center', gap: space.xs, flexShrink: 1 },
   row1Right: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginRight: -space.md }, // bookmark's 48dp target reaches the card edge
   bookmark: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
+  flag: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  flagWord: { fontWeight: '600' },
   organizer: { marginTop: space.xs },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', columnGap: space.lg, rowGap: space.xs, marginTop: space.md },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: space.xs, maxWidth: '100%' },
