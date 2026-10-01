@@ -34,6 +34,14 @@
           "color": "#0E7C66",
           "defaultChannel": "deadlines"
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#F7F8FA",
+          "imageWidth": 200
+        }
       ]
     ],
     "scheme": "hackradar",

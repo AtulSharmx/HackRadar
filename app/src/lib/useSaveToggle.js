@@ -1,3 +1,5 @@
+import { useCallback, useRef } from 'react';
+
 import { useToast } from '../components/Toast';
 import { joinAnd } from './format';
 import { turnOnNotifications } from './notificationPermission';
@@ -7,11 +9,12 @@ import { isPast, useSaved } from './saved';
 
 // One save/unsave behaviour for cards and the detail screen, with Undo.
 // The Saved toast says which reminders were set (App Flow "Save and reminders").
+// The returned function never changes (it reads the latest state through a ref), so memoized cards stay put.
 export function useSaveToggle() {
-  const saved = useSaved();
-  const toast = useToast();
-  const { prefs, update } = usePrefs();
-  return (event) => {
+  const latest = useRef(null);
+  latest.current = { saved: useSaved(), toast: useToast(), ...usePrefs() };
+  return useCallback((event) => {
+    const { saved, toast, prefs, update } = latest.current;
     if (saved.isSaved(event.id)) {
       const before = saved.remove(event.id);
       toast('Removed from Saved.', { action: { label: 'Undo', onPress: () => saved.restore(event.id, before) } });
@@ -31,5 +34,5 @@ export function useSaveToggle() {
         : 'Saved. Too close to the deadline for reminders.',
       undo,
     );
-  };
+  }, []);
 }

@@ -25,7 +25,11 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
     if (visible) setF(filters);
   }, [visible, filters]);
 
-  const count = useMemo(() => applyView(events, { query, filters: f, sort, prefs }).length, [events, query, f, sort, prefs]);
+  // counted only while open: closed, it would redo the whole feed on every sort change and search keystroke
+  const count = useMemo(
+    () => (visible ? applyView(events, { query, filters: f, sort, prefs }).length : 0),
+    [visible, events, query, f, sort, prefs],
+  );
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const hasLocation = prefs?.lat != null;
   const fee = feeChoice(f);

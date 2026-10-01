@@ -57,6 +57,8 @@ function Bookmark({ saved, onToggle, title, colors }) {
 
 // event: a row from the events table. km: distance from me (null when unknown).
 // posted: when the source published it, shown while the Feed is sorted by Newest (so the order makes sense).
+// onPress / onLongPress / onToggleSave get the event, so a list passes one stable function to every card
+// and memo skips cards that didn't change (a new arrow per card made all 10 re-render on every tap).
 function EventCard({ event, km = null, saved = false, onPress, onLongPress, onToggleSave, now, posted = null }) {
   const { colors, elevation } = useAppTheme();
   const cd = countdown(event, now);
@@ -84,11 +86,11 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
     <PressableScale
       onPress={() => {
         tap();
-        onPress?.();
+        onPress?.(event);
       }}
       onLongPress={onLongPress && (() => {
         thud();
-        onLongPress();
+        onLongPress(event);
       })}
       accessibilityRole="button"
       accessibilityLabel={spoken}
@@ -107,7 +109,7 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
         </View>
         <View style={styles.row1Right}>
           <MaterialCommunityIcons name={trust.icon} size={20} color={colors[trust.tone]} />
-          {onToggleSave ? <Bookmark saved={saved} onToggle={onToggleSave} title={event.title} colors={colors} /> : null}
+          {onToggleSave ? <Bookmark saved={saved} onToggle={() => onToggleSave(event)} title={event.title} colors={colors} /> : null}
         </View>
       </View>
 
