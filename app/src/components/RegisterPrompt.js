@@ -5,6 +5,7 @@ import Animated, { FadeIn, Keyframe } from 'react-native-reanimated';
 
 import { layout, motion, radius, space, type, useAppTheme } from '../theme';
 import Button from './Button';
+import IconButton from './IconButton';
 
 // the card rises a little and settles, under the 250 ms the brief allows; instant with "remove animations"
 const rise = new Keyframe({
@@ -26,9 +27,7 @@ export default function RegisterPrompt({ visible, title, where, minutes, onRegis
       <Animated.View entering={FadeIn.duration(motion.base)} style={[styles.backdrop, { backgroundColor: colors.scrim }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" />
         <Animated.View entering={rise} style={[styles.card, { backgroundColor: colors.surface }]} accessibilityViewIsModal>
-          <Pressable onPress={onClose} style={styles.close} hitSlop={8} accessibilityRole="button" accessibilityLabel="Close">
-            <MaterialCommunityIcons name="close" size={22} color={colors.textSecondary} />
-          </Pressable>
+          <IconButton icon="close" size={22} color={colors.textSecondary} label="Close" onPress={onClose} style={styles.close} />
           <View style={[styles.badge, { backgroundColor: colors.brandSoft }]}>
             <MaterialCommunityIcons name="clipboard-check-outline" size={30} color={colors.brand} />
           </View>

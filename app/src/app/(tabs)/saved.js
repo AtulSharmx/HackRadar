@@ -25,7 +25,7 @@ function Segments({ value, onChange, counts, colors }) {
           if (!on) select();
           onChange(key);
         }}
-        style={[styles.seg, on && { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={({ pressed }) => [styles.seg, on && { backgroundColor: colors.surface, borderColor: colors.border }, pressed && !on && styles.pressed]}
         accessibilityRole="tab"
         accessibilityState={{ selected: on }}
         accessibilityLabel={`${label}, ${counts[key]}`}
@@ -47,7 +47,7 @@ function Segments({ value, onChange, counts, colors }) {
 // Swipe left reveals Remove (App Flow: Saved tab)
 function RemoveAction({ onPress, colors }) {
   return (
-    <Pressable onPress={onPress} style={[styles.removeAction, { backgroundColor: colors.urgent }]} accessibilityRole="button" accessibilityLabel="Remove">
+    <Pressable onPress={onPress} android_ripple={{ color: colors.urgentSoft }} style={[styles.removeAction, { backgroundColor: colors.urgent }]} accessibilityRole="button" accessibilityLabel="Remove">
       <MaterialCommunityIcons name="bookmark-remove-outline" size={24} color={colors.onBrand} />
       <Text style={[type.label, { color: colors.onBrand }]}>Remove</Text>
     </Pressable>
@@ -132,6 +132,7 @@ export default function SavedScreen() {
                 select();
                 setShowPast((v) => !v);
               }}
+              android_ripple={{ color: colors.border }}
               style={styles.pastHeader}
               accessibilityRole="button"
               accessibilityState={{ expanded: showPast }}
@@ -169,6 +170,7 @@ const styles = StyleSheet.create({
   },
   list: { padding: layout.screenPadding, paddingBottom: space.xxl * 2 },
   rowGap: { marginBottom: layout.cardGap },
+  pressed: { opacity: 0.6 },
   removeAction: {
     width: 104, alignItems: 'center', justifyContent: 'center', gap: space.xs,
     borderRadius: radius.card, marginLeft: space.sm,

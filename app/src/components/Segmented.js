@@ -47,7 +47,7 @@ export default function Segmented({ options, value, onChange, accessibilityLabel
               select();
               onChange(key);
             }}
-            style={styles.segment}
+            style={({ pressed }) => [styles.segment, pressed && !on && styles.pressed]}
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
             accessibilityLabel={label}
@@ -70,4 +70,5 @@ const styles = StyleSheet.create({
   track: { flexDirection: 'row', borderRadius: radius.button, padding: PAD, width: '100%' }, // full width even inside a wrapping row
   thumb: { position: 'absolute', top: PAD, bottom: PAD, left: PAD, borderRadius: radius.button - 3 },
   segment: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.xs },
+  pressed: { opacity: 0.55 },
 });

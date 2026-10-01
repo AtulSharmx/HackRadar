@@ -6,16 +6,26 @@ const PAGE = 500;
 
 export const emptyCache = { events: {}, lastSync: null, fetchedAt: null };
 
+// The phone's copy is read from storage once and then kept in memory: it's a few hundred KB of JSON, and
+// parsing it again on every event opened made opening a card feel slow.
+let inMemory = null;
+
 export function loadCache(storage = globalThis.localStorage) {
+  const shared = storage === globalThis.localStorage;
+  if (shared && inMemory) return inMemory;
+  let cache = emptyCache;
   try {
     const raw = storage?.getItem(CACHE_KEY);
-    return raw ? { ...emptyCache, ...JSON.parse(raw) } : emptyCache;
+    if (raw) cache = { ...emptyCache, ...JSON.parse(raw) };
   } catch {
-    return emptyCache; // a corrupt cache must never stop the app; the next sync rebuilds it
+    cache = emptyCache; // a corrupt cache must never stop the app; the next sync rebuilds it
   }
+  if (shared) inMemory = cache;
+  return cache;
 }
 
 export function saveCache(cache, storage = globalThis.localStorage) {
+  if (storage === globalThis.localStorage) inMemory = cache;
   try {
     storage?.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {

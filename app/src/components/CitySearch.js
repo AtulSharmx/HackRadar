@@ -5,6 +5,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { select, success, warn } from '../lib/haptics';
+import IconButton from './IconButton';
 import { localPlaces, locateMe, searchPlaces } from '../lib/places';
 import { CHROME_MAX_SCALE, layout, motion, space, type, useAppTheme } from '../theme';
 
@@ -109,9 +110,7 @@ export default function CitySearch({ visible, onClose, onPick, onRemove }) {
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent navigationBarTranslucent>
       <View style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
         <View style={[styles.bar, { borderBottomColor: colors.border }]}>
-          <Pressable onPress={onClose} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Back" hitSlop={4}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-          </Pressable>
+          <IconButton icon="arrow-left" label="Back" onPress={onClose} />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -127,9 +126,7 @@ export default function CitySearch({ visible, onClose, onPick, onRemove }) {
             accessibilityLabel="Search your city or area"
           />
           {query ? (
-            <Pressable onPress={() => setQuery('')} style={styles.iconBtn} accessibilityRole="button" accessibilityLabel="Clear search">
-              <MaterialCommunityIcons name="close-circle" size={20} color={colors.textSecondary} />
-            </Pressable>
+            <IconButton icon="close-circle" size={20} color={colors.textSecondary} label="Clear search" onPress={() => { select(); setQuery(''); }} />
           ) : null}
         </View>
 

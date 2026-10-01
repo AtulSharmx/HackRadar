@@ -1,11 +1,12 @@
 import { Pressable } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { motion } from '../theme';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// The one press feedback used app-wide: a small spring scale on the UI thread.
+// The one press feedback used app-wide, on the UI thread: it shrinks at once when the finger lands
+// (a short timing, so a tap never feels mushy) and springs back on release.
 // Reanimated's default ReduceMotion.System makes it instant when the phone says "remove animations".
 export default function PressableScale({ style, onPressIn, onPressOut, scaleTo = motion.pressScale, ...rest }) {
   const scale = useSharedValue(1);
@@ -15,7 +16,7 @@ export default function PressableScale({ style, onPressIn, onPressOut, scaleTo =
       {...rest}
       style={[style, animated]}
       onPressIn={(e) => {
-        scale.value = withSpring(scaleTo, motion.spring);
+        scale.value = withTiming(scaleTo, { duration: 90 });
         onPressIn?.(e);
       }}
       onPressOut={(e) => {

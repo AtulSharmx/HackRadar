@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Button from '../components/Button';
 import CodeInput from '../components/CodeInput';
+import IconButton from '../components/IconButton';
 import PressableScale from '../components/PressableScale';
 import RadarPing from '../components/RadarPing';
 import {
@@ -337,19 +338,15 @@ export default function AccountScreen() {
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={styles.bar}>
         {step !== 'done' ? (
-          <Pressable
+          <IconButton
+            icon={canStepBack ? 'arrow-left' : 'close'}
+            label={canStepBack ? 'Back' : 'Close'}
             onPress={() => {
               select();
               if (canStepBack) go(step === 'code' ? channel : 'choose');
               else router.back();
             }}
-            style={styles.barBtn}
-            accessibilityRole="button"
-            accessibilityLabel={canStepBack ? 'Back' : 'Close'}
-            hitSlop={4}
-          >
-            <MaterialCommunityIcons name={canStepBack ? 'arrow-left' : 'close'} size={24} color={colors.textPrimary} />
-          </Pressable>
+          />
         ) : null}
       </View>
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + space.xl }]} keyboardShouldPersistTaps="handled">

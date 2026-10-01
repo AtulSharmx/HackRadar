@@ -11,6 +11,7 @@ import Button from '../../components/Button';
 import Chip from '../../components/Chip';
 import EventCard from '../../components/EventCard';
 import FilterSheet from '../../components/FilterSheet';
+import IconButton from '../../components/IconButton';
 import PressableScale from '../../components/PressableScale';
 import SkeletonCard from '../../components/SkeletonCard';
 import SortSheet from '../../components/SortSheet';
@@ -116,6 +117,12 @@ export default function FeedScreen() {
     setPage(1);
     toTop(false);
   }, [sort, filters, query]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // cards are on screen at once when the app opens; only a new page or order fades them in
+  const shownOnce = useRef(false);
+  useEffect(() => {
+    if (hasCache) shownOnce.current = true;
+  });
 
   const goPage = (n) => {
     select();
@@ -225,17 +232,16 @@ export default function FeedScreen() {
             accessibilityLabel="Search hackathons or organizers"
           />
           {query ? (
-            <Pressable
+            <IconButton
+              icon="close-circle"
+              size={18}
+              color={colors.textSecondary}
+              label="Clear search"
               onPress={() => {
                 select();
                 setQuery('');
               }}
-              style={styles.clear}
-              accessibilityRole="button"
-              accessibilityLabel="Clear search"
-            >
-              <MaterialCommunityIcons name="close-circle" size={18} color={colors.textSecondary} />
-            </Pressable>
+            />
           ) : null}
         </View>
       </View>
@@ -274,7 +280,7 @@ export default function FeedScreen() {
           // cards of a new page (or a new order) fade up in a quick stagger; kept ones glide to their new place
           <Animated.View
             key={item.id}
-            entering={FadeInDown.duration(motion.base).delay(Math.min(i, 6) * 25)}
+            entering={shownOnce.current ? FadeInDown.duration(motion.base).delay(Math.min(i, 5) * 18) : undefined}
             layout={LinearTransition.duration(motion.base)}
             style={i ? styles.gap : null}
           >
@@ -374,7 +380,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderRadius: radius.button, paddingLeft: space.md,
   },
   searchInput: { flex: 1, paddingVertical: space.sm },
-  clear: { width: layout.minTouch, height: layout.minTouch, alignItems: 'center', justifyContent: 'center' },
   // a horizontal ScrollView grows to fill free height by default, which pushed the list half down the screen
   chipsBar: { flexGrow: 0, flexShrink: 0 },
   chips: { paddingHorizontal: layout.screenPadding, paddingTop: space.md, gap: space.sm },
