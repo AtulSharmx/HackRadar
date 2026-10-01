@@ -16,12 +16,15 @@ test('sections: interested by closest deadline, registered by start date, closed
       r2: { status: 'registered', event: ev('r2', '2026-10-03T00:00:00Z', { start_date: '2026-10-12T03:30:00Z' }) },
       old: { status: 'interested', event: ev('old', '2026-09-20T18:29:00Z') },
       shut: { status: 'registered', event: ev('shut', '2026-10-30T18:29:00Z', { status: 'closed' }) },
+      // registration closed, the event is still ahead: stays under Registered
+      soon: { status: 'registered', event: ev('soon', '2026-09-25T18:29:00Z', { status: 'closed', start_date: '2026-10-05T03:30:00Z' }) },
+      done: { status: 'registered', event: ev('done', '2026-09-10T18:29:00Z', { status: 'closed', start_date: '2026-09-20T03:30:00Z', end_date: '2026-09-21T03:30:00Z' }) },
     },
   };
   const s = sections(state, NOW);
   expect(s.interested.map((e) => e.id)).toEqual(['b', 'a', 'c']);
-  expect(s.registered.map((e) => e.id)).toEqual(['r2', 'r1']);
-  expect(s.past.map((e) => e.id).sort()).toEqual(['old', 'shut']);
+  expect(s.registered.map((e) => e.id)).toEqual(['soon', 'r2', 'r1']);
+  expect(s.past.map((e) => e.id).sort()).toEqual(['done', 'old', 'shut']);
 });
 
 test('isPast', () => {

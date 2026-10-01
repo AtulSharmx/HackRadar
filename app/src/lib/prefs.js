@@ -59,7 +59,7 @@ function write(v) {
   }
 }
 
-const PrefsContext = createContext({ prefs: null, onboarded: false, save: () => {} });
+const PrefsContext = createContext({ prefs: null, onboarded: false, save: () => {}, update: () => {} });
 
 export function usePrefs() {
   return useContext(PrefsContext);
@@ -105,9 +105,16 @@ export function PrefsProvider({ children }) {
     setState(next);
   }, []);
 
+  // change some fields of the latest prefs (safe from a toast action that runs seconds later)
+  const update = useCallback((patch) => setState((s) => {
+    const next = { prefs: { ...DEFAULT_PREFS, ...s.prefs, ...patch }, dirty: true };
+    write(next);
+    return next;
+  }), []);
+
   return createElement(
     PrefsContext.Provider,
-    { value: { prefs: state.prefs, onboarded: !!state.prefs, save } },
+    { value: { prefs: state.prefs, onboarded: !!state.prefs, save, update } },
     children,
   );
 }

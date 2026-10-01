@@ -32,14 +32,21 @@ const byDeadline = (a, b) => {
 const byStart = (a, b) =>
   (a.event?.start_date || a.event?.registration_deadline || '9').localeCompare(b.event?.start_date || b.event?.registration_deadline || '9');
 
+// A Registered event stays until the event itself is over: its registration has usually closed long before
+function isOver(entry, now) {
+  const e = entry.event;
+  const last = e && e.status !== 'stale' && entry.status === 'registered' && (e.end_date || e.start_date);
+  return last ? new Date(last).getTime() + 86400000 < now : isPast(e, now); // + a day: dates are often midnight
+}
+
 // { interested: [...], registered: [...], past: [...] }, each sorted for its section
 export function sections(state, now = new Date()) {
   const all = Object.entries(state.entries).map(([id, e]) => ({ id, ...e }));
-  const live = all.filter((e) => !isPast(e.event, now));
+  const live = all.filter((e) => !isOver(e, now));
   return {
     interested: live.filter((e) => e.status === 'interested').sort(byDeadline),
     registered: live.filter((e) => e.status === 'registered').sort(byStart),
-    past: all.filter((e) => isPast(e.event, now)).sort((a, b) => byDeadline(b, a)),
+    past: all.filter((e) => isOver(e, now)).sort((a, b) => byDeadline(b, a)),
   };
 }
 

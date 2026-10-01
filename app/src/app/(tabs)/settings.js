@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Button from '../../components/Button';
@@ -13,7 +13,7 @@ import { useToast } from '../../components/Toast';
 import { explain, logOut } from '../../lib/account';
 import { select, success } from '../../lib/haptics';
 import { DEGREES, THEMES, yearOptions } from '../../lib/labels';
-import { askNotificationPermission } from '../../lib/notificationPermission';
+import { turnOnNotifications } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
 import { useSaved } from '../../lib/saved';
 import { useSession } from '../../lib/session';
@@ -96,7 +96,7 @@ function AccountCard({ colors, onLogOut, leaving }) {
 // App Flow "Settings flows": one scrolling list; every change saves at once (phone first, then the devices row).
 export default function SettingsScreen() {
   const { colors } = useAppTheme();
-  const { prefs, save } = usePrefs();
+  const { prefs, save, update: patchPrefs } = usePrefs();
   const saved = useSaved();
   const toast = useToast();
   const params = useLocalSearchParams();
@@ -126,14 +126,7 @@ export default function SettingsScreen() {
     update({ degree: next, year: stillValid ? prefs.year : null });
   };
 
-  const setNotifications = async (on) => {
-    if (!on) return update({ notifications: false });
-    const granted = await askNotificationPermission();
-    update({ notifications: granted });
-    if (!granted) {
-      toast('Notifications are blocked for HackRadar.', { action: { label: 'Open settings', onPress: () => Linking.openSettings() } });
-    }
-  };
+  const setNotifications = (on) => (on ? turnOnNotifications(patchPrefs, toast) : update({ notifications: false }));
 
   const confirmLogOut = () => Alert.alert(
     'Log out?',

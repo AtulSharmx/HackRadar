@@ -57,6 +57,13 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     Google sign-in, expo-crypto (secure PKCE) and expo-intent-launcher (Unstop app hand-off).
   - Check: the app runs from the dev build with the same features as Expo Go.
 - [ ] B2 Reminders: 7 d, 48 h, 24 h before saved deadlines; quiet hours; cancel on unsave; "starts tomorrow" for Registered. Toast text back to the App Flow wording.
+  - 1 Oct: built (app/src/lib/reminders.js). The phone's schedule is kept equal to Saved on every change
+    (save, unsave, Registered, a deadline that moved, notifications off, log out). Quiet 11 pm to 8 am IST
+    moves a reminder to 9 pm before; titles say "closes in 7 days / in 2 days / tomorrow" by calendar day.
+    Registered: 7 pm IST the evening before it starts. Tap opens the event. No exact-alarm permission
+    (Android's inexact "allow while idle" alarm, minutes late at worst). New HackRadar icon set and status-bar
+    icon. Registered events now stay under Registered until the event is over (closed registration moved
+    them to Past).
   - Check: a test event 25 h away rings the 24 h reminder with the phone locked (Samsung, battery optimisation on and off).
 - [ ] B3 Push: push_tokens table + RLS, register the token, collector sends new-match and saved-change pushes via Expo, receipts next run.
   - Check: a new matching event reaches the phone as a push; tapping opens the right screen.

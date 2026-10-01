@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '../components/Toast';
 import { PrefsProvider, usePrefs } from '../lib/prefs';
+import { useReminders } from '../lib/reminders';
 import { SavedProvider } from '../lib/saved';
 import { SessionProvider } from '../lib/session';
 import { useAppTheme } from '../theme';
@@ -12,6 +13,7 @@ import { useAppTheme } from '../theme';
 function Routes() {
   const { colors } = useAppTheme();
   const { onboarded } = usePrefs();
+  useReminders();
   return (
     <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Protected guard={!onboarded}>
