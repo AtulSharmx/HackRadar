@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "497221894048",
+    "project_id": "hackradar-510217",
+    "storage_bucket": "hackradar-510217.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:497221894048:android:f0bc0a53651ed2b638aec5",
+        "android_client_info": {
+          "package_name": "com.hackradar.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "497221894048-dh2n2kheeou2ad540u46vn138nku3ftj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBr4J5BbSvLX8LayTuphH_EDDedD00LWIQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "497221894048-dh2n2kheeou2ad540u46vn138nku3ftj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
