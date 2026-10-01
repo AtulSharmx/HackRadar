@@ -18,15 +18,16 @@ Signature element: the countdown badge on each card ("5 days left" in urgent/soo
 
 ## Nav Read
 ```
-tabs (3): Feed · Saved · Settings      (App Flow doc; no profile screen exists, so Settings is a tab)
+tabs (3): Feed · Saved · Profile       (Profile = account + my feed preferences; route stays /settings)
 src/app/
   (onboarding)/ welcome, interests, join, location, notifications   first launch only
   (tabs)/ index = Feed  → push event/[id]
           saved         → push event/[id]
-          settings
+          settings      "Profile" tab → push about; account (slides up)
   event/[id]                           push, deep link hackradar://event/<id>
-sheets: filters (over Feed)
-android back: default pop; Filters sheet closes first
+entry points: Feed chip row: Filters (sheet), Sort (sheet), City (full-screen city search)
+sheets: filters, sort (over Feed); app hand-off (Event detail); row menu (Saved)
+android back: default pop; an open sheet closes first
 max taps to any core screen: 2
 ```
 
@@ -37,7 +38,13 @@ max taps to any core screen: 2
 - Screen padding 16, card gap 12, card padding 16.
 - System font (Roboto). Brief-listed muted color changed for contrast (see theme.js comments).
 - No gradients, illustrations, emoji, stock images, exclamation marks (except the one welcome line).
-- Deviations from the mobile-taste skill, on purpose: Settings is a tab (App Flow doc decides).
+- Third tab is "Profile" (user's choice, 1 Oct): it holds the account and the feed preferences.
 - Deviation from the brief, user's choice (29 Sep): tab header titles are centered ("HackRadar" on Feed), not left.
 - Deviation from the brief, user's choice (30 Sep): light theme only; the dark theme was removed.
-- Settings shows every choice in place (chips, Segmented); bottom sheets are for Feed filters and sort only.
+- Profile shows every choice in place (chips, Segmented); bottom sheets are for Feed filters and sort only.
+- Feed top (user's choice, 1 Oct): search, then ONE chip row: Filters · Sort · City (action chips with an
+  icon), then the filters that are on as soft (tinted) chips with an x. No floating bar, no city banner.
+- Trust shows on a card only when it needs a look ("Check details", "Warning"), as icon + word; 9 in 10
+  events come from trusted sources, so a mark on every card said nothing. Event detail keeps the full label.
+- Taps must answer within a frame: list items take one stable callback (memo), heavy list updates go in
+  startTransition, tabs are prefetched. Measured before/after in design-baseline.json.

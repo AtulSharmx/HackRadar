@@ -45,7 +45,7 @@ export default function NotificationsStep() {
         ))}
       </View>
       <Text style={[type.meta, { color: colors.textSecondary }]}>
-        You can turn these off any time in Settings.
+        You can turn these off any time in Profile.
       </Text>
     </OnboardingStep>
   );
