@@ -15,6 +15,7 @@ import { select, success } from '../../lib/haptics';
 import { DEGREES, THEMES, yearOptions } from '../../lib/labels';
 import { turnOnNotifications } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
+import { registerPush, usePushStatus } from '../../lib/push';
 import { useSaved } from '../../lib/saved';
 import { useSession } from '../../lib/session';
 import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../../theme';
@@ -49,6 +50,21 @@ function Item({ label, hint, children, colors, last }) {
       </View>
       {children}
     </View>
+  );
+}
+
+// Under "New hackathon alerts": says so when this phone can't receive them, with the one fix that helps
+function AlertsNote({ colors, onAllow, onRetry }) {
+  const s = usePushStatus();
+  if (s.state !== 'blocked' && s.state !== 'error') return null;
+  const blocked = s.state === 'blocked';
+  return (
+    <Animated.View entering={FadeIn.duration(motion.base)} style={styles.alertsNote} accessibilityLiveRegion="polite">
+      <Text style={[type.meta, { color: colors.urgent }]}>
+        {blocked ? "Notifications aren't allowed for HackRadar on this phone, so alerts can't arrive." : s.message}
+      </Text>
+      <Button label={blocked ? 'Allow notifications' : 'Try again'} variant="text" onPress={blocked ? onAllow : onRetry} style={styles.alertsAction} />
+    </Animated.View>
   );
 }
 
@@ -97,6 +113,7 @@ function AccountCard({ colors, onLogOut, leaving }) {
 export default function SettingsScreen() {
   const { colors } = useAppTheme();
   const { prefs, save, update: patchPrefs } = usePrefs();
+  const { user } = useSession();
   const saved = useSaved();
   const toast = useToast();
   const [cityOpen, setCityOpen] = useState(false);
@@ -224,6 +241,13 @@ export default function SettingsScreen() {
               value={!!(prefs.match_alerts ?? prefs.notifications)}
               onChange={setMatchAlerts}
             />
+            {prefs.match_alerts ?? prefs.notifications ? (
+              <AlertsNote
+                colors={colors}
+                onAllow={() => turnOnNotifications(patchPrefs, toast, 'match_alerts').then((ok) => ok && user && registerPush(user.id))}
+                onRetry={() => user && registerPush(user.id)}
+              />
+            ) : null}
             <SwitchRow label="Deadline reminders" hint="7 days, 48 h and 24 h before a saved deadline" value={!!prefs.notifications} onChange={setNotifications} />
             <SwitchRow
               label="Hide events with warnings"
@@ -285,6 +309,8 @@ const styles = StyleSheet.create({
   },
   cityText: { flex: 1 },
   switches: { paddingVertical: space.sm },
+  alertsNote: { paddingBottom: space.sm, gap: space.xs },
+  alertsAction: { alignSelf: 'flex-start' },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
   linkText: { flex: 1 },
   account: {
