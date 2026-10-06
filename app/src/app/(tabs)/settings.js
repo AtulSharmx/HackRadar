@@ -155,7 +155,9 @@ export default function SettingsScreen() {
             saved.clearLocal();
             await logOut();
             success();
-            toast('Logged out. You are a guest on this phone now.');
+            toast('Logged out.');
+            // like any app: ask to sign in again; the sign-in screen's X keeps going as a guest
+            router.push('/account');
           } catch (e) {
             toast(explain(e));
           } finally {
