@@ -150,3 +150,8 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   - Layout audit (mobile-redesign-app, app/design-baseline.json), approved by the user: Feed has one chip
     row (Filters, Sort, City, then active filters) instead of a floating pill and a city banner; trust shows
     on a card only for "Check details" and "Warning"; the third tab is "Profile".
+- 6 Oct 2026, "the app must work without my laptop": the phone had the development build again (it loads
+  JS from Metro). The release (preview) APK is standalone. Log out now opens sign-in ("Continue as guest"
+  stays one tap away). EAS Update added (expo-updates, channels, runtimeVersion "fingerprint"): JS-only
+  changes ship with `eas update --channel preview --environment preview`; installed apps take them on the
+  next launch. Native changes (new native package, app.json plugins) still need a new APK.
