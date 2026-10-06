@@ -19,6 +19,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -52,6 +55,9 @@
         "projectId": "b41f7f97-2db0-4a5d-b90f-47254ece664d"
       }
     },
-    "owner": "atulshxrma"
+    "owner": "atulshxrma",
+    "updates": {
+      "url": "https://u.expo.dev/b41f7f97-2db0-4a5d-b90f-47254ece664d"
+    }
   }
 }
