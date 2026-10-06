@@ -230,6 +230,8 @@ export default function AccountScreen() {
         <Text style={[type.meta, styles.center, { color: colors.textSecondary }]}>
           No password needed. We use your email or number only to sign you in.
         </Text>
+        {/* after Log out this screen opens by itself; signing in stays optional */}
+        {onboarded ? <Button label="Continue as guest" variant="text" onPress={() => router.back()} /> : null}
       </Animated.View>
     );
   } else if (step === 'email') {
