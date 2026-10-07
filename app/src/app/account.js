@@ -16,6 +16,7 @@ import {
 } from '../lib/account';
 import { select, success, tap, warn } from '../lib/haptics';
 import { usePrefs } from '../lib/prefs';
+import { useSession } from '../lib/session';
 import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../theme';
 
 // the plain message, and the server's own words small under it (so a failure can be traced)
@@ -63,6 +64,7 @@ export default function AccountScreen() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { onboarded, save } = usePrefs();
+  const { mustSignIn } = useSession(); // logged out of an account: signing in is the only way back in
   const [step, setStep] = useState('choose'); // choose | email | phone | code | done
   const [channel, setChannel] = useState('email'); // where the code went
   const [email, setEmail] = useState('');
@@ -124,7 +126,8 @@ export default function AccountScreen() {
     setTimeout(() => {
       if (restored) router.replace('/');
       else if (!onboarded) router.replace('/interests'); // signed in, now set up the feed
-      else router.back();
+      else if (router.canGoBack()) router.back();
+      else router.replace('/'); // came from the lock after log out: nothing behind this screen
     }, 1100);
   };
 
@@ -202,7 +205,9 @@ export default function AccountScreen() {
           Sign in to HackRadar
         </Text>
         <Text style={[type.body, styles.center, { color: colors.textSecondary }]}>
-          Keep your saved hackathons and preferences on any phone. New here? The same steps create your account.
+          {mustSignIn
+            ? 'You logged out. Sign in to keep using HackRadar; your saved hackathons come back with your account.'
+            : 'Keep your saved hackathons and preferences on any phone. New here? The same steps create your account.'}
         </Text>
         <View style={styles.methods}>
           <Method icon="google" label="Continue with Google" onPress={() => oauth('google', 'Google')} ready={!!providers.google} busy={busy === 'google'} colors={colors} delay={60} />
@@ -230,8 +235,6 @@ export default function AccountScreen() {
         <Text style={[type.meta, styles.center, { color: colors.textSecondary }]}>
           No password needed. We use your email or number only to sign you in.
         </Text>
-        {/* after Log out this screen opens by itself; signing in stays optional */}
-        {onboarded ? <Button label="Continue as guest" variant="text" onPress={() => router.back()} /> : null}
       </Animated.View>
     );
   } else if (step === 'email') {
@@ -339,7 +342,7 @@ export default function AccountScreen() {
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={styles.bar}>
-        {step !== 'done' ? (
+        {step !== 'done' && !(mustSignIn && !canStepBack) ? ( // locked: no way out but signing in
           <IconButton
             icon={canStepBack ? 'arrow-left' : 'close'}
             label={canStepBack ? 'Back' : 'Close'}
