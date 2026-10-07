@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '../components/Toast';
+import { useAppUpdates } from '../lib/appUpdates';
 import { PrefsProvider, usePrefs } from '../lib/prefs';
 import { usePushRegistration } from '../lib/push';
 import { useReminders } from '../lib/reminders';
@@ -18,6 +19,7 @@ function Routes() {
   const { mustSignIn } = useSession();
   useReminders();
   usePushRegistration();
+  useAppUpdates();
   return (
     <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Protected guard={!onboarded && !mustSignIn}>

@@ -11,6 +11,7 @@ import Segmented from '../../components/Segmented';
 import SwitchRow from '../../components/SwitchRow';
 import { useToast } from '../../components/Toast';
 import { explain, logOut } from '../../lib/account';
+import { versionLine } from '../../lib/appUpdates';
 import { select, success } from '../../lib/haptics';
 import { DEGREES, THEMES, yearOptions } from '../../lib/labels';
 import { turnOnNotifications } from '../../lib/notificationPermission';
@@ -274,6 +275,8 @@ export default function SettingsScreen() {
             <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
           </Pressable>
         </Section>
+        {/* which version this phone runs: shows when an update has arrived */}
+        <Text style={[type.meta, styles.version, { color: colors.textSecondary }]}>{versionLine()}</Text>
       </ScrollView>
 
       <CitySearch
@@ -310,6 +313,7 @@ const styles = StyleSheet.create({
   cityText: { flex: 1 },
   switches: { paddingVertical: space.sm },
   alertsNote: { paddingBottom: space.sm, gap: space.xs },
+  version: { textAlign: 'center' },
   alertsAction: { alignSelf: 'flex-start' },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
   linkText: { flex: 1 },
