@@ -26,7 +26,27 @@ export async function ensureGuest() {
   return ensureDevice(user);
 }
 
-const SessionContext = createContext({ user: null, error: null, retry: () => {}, isGuest: true, email: null });
+// After someone logs out of a real account, this phone stays locked on the sign-in screen until they sign
+// in again (user's ask, 7 Oct). Remembered across restarts. A guest is never locked: a guest has nothing
+// to sign back in with.
+const LOCK_KEY = 'hackradar.signInRequired.v1';
+const readLock = () => {
+  try {
+    return globalThis.localStorage?.getItem(LOCK_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+const writeLock = (on) => {
+  try {
+    if (on) globalThis.localStorage?.setItem(LOCK_KEY, '1');
+    else globalThis.localStorage?.removeItem(LOCK_KEY);
+  } catch {
+    // memory only, until the app restarts
+  }
+};
+
+const SessionContext = createContext({ user: null, error: null, retry: () => {}, isGuest: true, email: null, mustSignIn: false });
 
 export function useSession() {
   return useContext(SessionContext);
@@ -38,7 +58,18 @@ const sameUser = (a, b) => a?.id === b?.id && a?.email === b?.email && a?.phone 
 // Never blocks the UI: cached content can show while this runs; failures retry when the app comes back.
 export function SessionProvider({ children }) {
   const [state, setState] = useState({ user: null, error: null });
+  const [locked, setLocked] = useState(readLock);
   const ready = useRef(false);
+  const current = useRef(null); // the user before a SIGNED_OUT, to tell an account from a guest
+  current.current = state.user;
+  const lock = useCallback((on) => {
+    writeLock(on);
+    setLocked(on);
+  }, []);
+  // a real account is signed in again (or was already, on app start): unlock
+  useEffect(() => {
+    if (locked && state.user && !state.user.is_anonymous) lock(false);
+  }, [locked, state.user, lock]);
 
   const retry = useCallback(() => {
     ensureGuest()
@@ -59,6 +90,7 @@ export function SessionProvider({ children }) {
       // supabase-js: no awaited supabase calls inside this callback, so the follow-up work is deferred
       setTimeout(() => {
         if (event === 'SIGNED_OUT') {
+          if (current.current && !current.current.is_anonymous) lock(true);
           ready.current = false;
           setState({ user: null, error: null });
           retry(); // back to a fresh guest
@@ -74,13 +106,15 @@ export function SessionProvider({ children }) {
       sub.remove();
       auth.subscription.unsubscribe();
     };
-  }, [retry]);
+  }, [retry, lock]);
 
   const meta = state.user?.user_metadata || {};
+  const isGuest = state.user ? !!state.user.is_anonymous : true;
   const value = {
     ...state,
     retry,
-    isGuest: state.user ? !!state.user.is_anonymous : true,
+    isGuest,
+    mustSignIn: locked && isGuest,
     email: state.user?.email || null,
     phone: state.user?.phone ? `+${state.user.phone}` : null,
     name: meta.full_name || meta.name || meta.user_name || null, // from Google or GitHub

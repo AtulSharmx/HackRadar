@@ -142,7 +142,7 @@ export default function SettingsScreen() {
 
   const confirmLogOut = () => Alert.alert(
     'Log out?',
-    'Your saved hackathons stay in your account. On this phone you continue as a guest.',
+    'Your saved hackathons stay in your account. To use HackRadar on this phone again, you will sign in.',
     [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -155,9 +155,7 @@ export default function SettingsScreen() {
             saved.clearLocal();
             await logOut();
             success();
-            toast('Logged out.');
-            // like any app: ask to sign in again; the sign-in screen's X keeps going as a guest
-            router.push('/account');
+            toast('Logged out.'); // the app now shows only sign-in until they sign in again (session.mustSignIn)
           } catch (e) {
             toast(explain(e));
           } finally {

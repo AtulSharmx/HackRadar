@@ -7,21 +7,23 @@ import { PrefsProvider, usePrefs } from '../lib/prefs';
 import { usePushRegistration } from '../lib/push';
 import { useReminders } from '../lib/reminders';
 import { SavedProvider } from '../lib/saved';
-import { SessionProvider } from '../lib/session';
+import { SessionProvider, useSession } from '../lib/session';
 import { useAppTheme } from '../theme';
 
 // Onboarding until my preferences exist, then the app. Protected routes swap them; no conditional renders in screens.
+// After logging out of an account (mustSignIn) both groups close, so only sign-in is left until they sign in again.
 function Routes() {
   const { colors } = useAppTheme();
   const { onboarded } = usePrefs();
+  const { mustSignIn } = useSession();
   useReminders();
   usePushRegistration();
   return (
     <Stack screenOptions={{ contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Protected guard={!onboarded}>
+      <Stack.Protected guard={!onboarded && !mustSignIn}>
         <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
       </Stack.Protected>
-      <Stack.Protected guard={onboarded}>
+      <Stack.Protected guard={onboarded && !mustSignIn}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="event/[id]"
