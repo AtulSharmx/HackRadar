@@ -18,7 +18,7 @@ import { useToast } from '../../components/Toast';
 import { activeChips, applyView, clearedFilters, defaultFilters, pageOf, SORTS } from '../../lib/feedView';
 import { ago } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
-import { select, tap } from '../../lib/haptics';
+import { select, success, tap } from '../../lib/haptics';
 import { usePrefs } from '../../lib/prefs';
 import { useSaved } from '../../lib/saved';
 import { useSaveToggle } from '../../lib/useSaveToggle';
@@ -133,6 +133,33 @@ export default function FeedScreen() {
     setPage(n);
     toTop(true);
   };
+
+  // Feed tab tapped while already on the Feed (user's ask, 8 Oct): once = back to the top;
+  // twice quickly = start over: fresh data, no filters, default sort, empty search, page 1.
+  const startOver = useRef(null);
+  startOver.current = () => {
+    success();
+    setQuery('');
+    setSort('best');
+    setFilters(clearedFilters());
+    setPage(1);
+    if (only) clearFrom();
+    toTop(true);
+    refresh();
+    toast('Fresh feed. Filters and sort cleared.');
+  };
+  const lastTap = useRef(0);
+  useEffect(() => navigation.addListener('tabPress', () => {
+    if (!navigation.isFocused()) return; // coming from another tab: just switch
+    const now = Date.now();
+    if (now - lastTap.current < 400) {
+      lastTap.current = 0;
+      startOver.current();
+    } else {
+      lastTap.current = now;
+      listRef.current?.scrollTo({ y: 0, animated: true });
+    }
+  }), [navigation]);
 
   // brief: sync indicator on the right of the header
   useLayoutEffect(() => {
