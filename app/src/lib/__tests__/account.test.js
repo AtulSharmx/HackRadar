@@ -2,7 +2,7 @@ jest.mock('../supabase', () => ({ supabase: {} }));
 jest.mock('expo-linking', () => ({ createURL: () => 'hackradar://auth-callback', addEventListener: () => ({ remove() {} }) }));
 jest.mock('expo-web-browser', () => ({}));
 
-import { explain, fullPhone, isEmail, isIndianMobile, paramsOf, waitSeconds } from '../account';
+import { explain, isEmail, paramsOf, waitSeconds } from '../account';
 
 test('the OAuth answer is read from the query or the fragment', () => {
   expect(paramsOf('hackradar://auth-callback?code=abc123')).toEqual({ code: 'abc123' });
@@ -12,12 +12,7 @@ test('the OAuth answer is read from the query or the fragment', () => {
   });
 });
 
-test('Indian mobile numbers, typed any common way', () => {
-  expect(isIndianMobile('98765 43210')).toBe(true);
-  expect(isIndianMobile('+91 98765 43210')).toBe(true);
-  expect(fullPhone('+91 98765 43210')).toBe('+919876543210');
-  expect(isIndianMobile('12345 67890')).toBe(false); // Indian mobiles start with 6-9
-  expect(isIndianMobile('98765')).toBe(false);
+test('email addresses', () => {
   expect(isEmail(' a.b@college.edu ')).toBe(true);
   expect(isEmail('a@b')).toBe(false);
 });

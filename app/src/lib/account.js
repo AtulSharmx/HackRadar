@@ -1,5 +1,6 @@
-// Sign in / create account without passwords: Google, GitHub, a code by SMS (India, +91) or by email.
-// A guest who signs in keeps their user id when the email/phone/Google account is new (it is attached to
+// Sign in / create account without passwords: Google, GitHub or a code by email. (Phone OTP was dropped on
+// 8 Oct 2026: SMS in India needed a paid provider and DLT setup the owner chose not to run.)
+// A guest who signs in keeps their user id when the email/Google account is new (it is attached to
 // the guest), so saves and preferences simply stay. If it already belongs to an account, that account is
 // signed in and this phone's saves are uploaded to it (lib/saved.js). docs/auth-plan.md
 import Constants from 'expo-constants';
@@ -18,17 +19,14 @@ export const RESEND_AFTER = 30; // seconds before "Resend code" works again
 export const CODE_LENGTH = 6;
 
 export const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((s || '').trim());
-export const phoneDigits = (s) => (s || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
-export const isIndianMobile = (s) => /^[6-9]\d{9}$/.test(phoneDigits(s));
-export const fullPhone = (s) => `+91${phoneDigits(s)}`;
-// Supabase's own gap between two codes to one number ("...only request this after 42 seconds"):
+// Supabase's own gap between two codes to one address ("...only request this after 42 seconds"):
 // the screen counts that down instead of failing a "Resend" tapped after our 30 s.
 export const waitSeconds = (error) => {
   const m = /after (\d+) seconds?/i.exec(error?.message || '');
   return m ? Number(m[1]) : null;
 };
 
-// Which sign-in methods the server has switched on ({ google, github, phone, email }), so a method that
+// Which sign-in methods the server has switched on ({ google, github, email }), so a method that
 // isn't set up yet is shown as "soon" instead of failing. Public endpoint, no user data.
 export async function getProviders() {
   try {
@@ -57,9 +55,9 @@ const backToApp = () => Linking.createURL('auth-callback');
 let browserSignIn = false;
 export const browserSignInActive = () => browserSignIn;
 
-// Email or SMS code. channel: 'email' | 'phone'. -> 'link' (confirms it on this guest) | 'signin'
-export async function sendCode(channel, value) {
-  const target = channel === 'phone' ? { phone: fullPhone(value) } : { email: value.trim().toLowerCase() };
+// A code by email. -> 'link' (confirms it on this guest) | 'signin'
+export async function sendCode(email) {
+  const target = { email: email.trim().toLowerCase() };
   const emailRedirectTo = backToApp(); // if the email template sends a link, tapping it still signs in here
   if ((await currentUser())?.is_anonymous) {
     const { error } = await supabase.auth.updateUser(target, { emailRedirectTo });
@@ -71,12 +69,11 @@ export async function sendCode(channel, value) {
   return 'signin';
 }
 
-export async function verifyCode(channel, value, code, mode) {
-  const phone = channel === 'phone';
+export async function verifyCode(email, code, mode) {
   const { data, error } = await supabase.auth.verifyOtp({
-    ...(phone ? { phone: fullPhone(value) } : { email: value.trim().toLowerCase() }),
+    email: email.trim().toLowerCase(),
     token: code.trim(),
-    type: phone ? (mode === 'link' ? 'phone_change' : 'sms') : (mode === 'link' ? 'email_change' : 'email'),
+    type: mode === 'link' ? 'email_change' : 'email',
   });
   if (error) throw error;
   return data.user;
