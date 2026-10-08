@@ -89,7 +89,7 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 ## D. Accounts and settings
 
 - [ ] D1 Google sign-in and email code, linking the guest account (same user id, saves kept).
-  - 30 Sep: sign-in screen with Google, GitHub, phone (+91 SMS) and email codes, 30 s resend, log out
+  - 30 Sep: sign-in screen with Google, GitHub and email codes (phone dropped 8 Oct), 30 s resend, log out
     (app/src/app/account.js, lib/account.js). Methods the server hasn't switched on show "Soon" (read from
     /auth/v1/settings). Setup left for the owner: Google/GitHub OAuth apps, an SMS provider (+ India DLT),
     email templates with {{ .Token }}, redirect URLs hackradar://** and exp://**, manual identity linking.
@@ -155,10 +155,6 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   stays one tap away). EAS Update added (expo-updates, channels, runtimeVersion "fingerprint"): JS-only
   changes ship with `eas update --channel preview --environment preview`; installed apps take them on the
   next launch. Native changes (new native package, app.json plugins) still need a new APK.
-- 8 Oct 2026, phone OTP (D1 rest): Supabase phone login through the Auth "Send SMS" hook, delivered by
-  Fast2SMS (Edge Function supabase/functions/send-sms, JWT off, Standard Webhooks signature). Supabase makes
-  and checks the 6-digit code (its hook schema fixes 6 digits), so the existing phone screen and its 30 s
-  resend timer just work; when Supabase asks for a longer gap the screen counts that down instead.
-  Key check: `python scripts/fast2sms_check.py` (wallet only) or `--send <mobile>` (one test OTP).
-  Owner steps: deploy the function in the dashboard editor, secrets FAST2SMS_API_KEY and
-  SEND_SMS_HOOK_SECRET, enable the Send SMS hook and the Phone provider.
+- 8 Oct 2026, phone OTP dropped (owner's call): a Supabase Send SMS hook + Fast2SMS version was written
+  (commit 5588a23) and removed the same day as too much setup (recharge, KYC, DLT, dashboard hooks).
+  Sign-in is Google, GitHub and email codes; the code screen still counts down Supabase's wait between codes.

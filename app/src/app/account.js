@@ -11,7 +11,7 @@ import IconButton from '../components/IconButton';
 import PressableScale from '../components/PressableScale';
 import RadarPing from '../components/RadarPing';
 import {
-  CODE_LENGTH, explain, fullPhone, getProviders, isEmail, isIndianMobile, phoneDigits, RESEND_AFTER,
+  CODE_LENGTH, explain, getProviders, isEmail, RESEND_AFTER,
   detailOf, savedPrefsOf, sendCode, signInWithProvider, verifyCode, waitSeconds,
 } from '../lib/account';
 import { select, success, tap, warn } from '../lib/haptics';
@@ -59,16 +59,14 @@ function Method({ icon, label, onPress, dark, ready, busy, colors, delay }) {
   );
 }
 
-// Sign in or create an account: no passwords. Google, GitHub, a code by SMS or email.
+// Sign in or create an account: no passwords. Google, GitHub or a code by email.
 export default function AccountScreen() {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { onboarded, save } = usePrefs();
   const { mustSignIn } = useSession(); // logged out of an account: signing in is the only way back in
-  const [step, setStep] = useState('choose'); // choose | email | phone | code | done
-  const [channel, setChannel] = useState('email'); // where the code went
+  const [step, setStep] = useState('choose'); // choose | email | code | done
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [codeState, setCodeState] = useState('idle'); // idle | error | done
   const [mode, setMode] = useState(null); // 'link' | 'signin' (lib/account.sendCode)
@@ -104,16 +102,16 @@ export default function AccountScreen() {
   useFocusEffect(useCallback(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (step === 'choose' || step === 'done') return false;
-      go(step === 'code' ? channel : 'choose');
+      go(step === 'code' ? 'email' : 'choose');
       return true;
     });
     return () => sub.remove();
-  }, [step, channel]));
+  }, [step]));
 
   // signed in: a quick tick, then where this person needs to be
   const finish = async (user) => {
     success();
-    setWho(user?.email || user?.phone || null);
+    setWho(user?.email || null);
     setStep('done');
     let restored = false;
     if (!onboarded) {
@@ -153,12 +151,11 @@ export default function AccountScreen() {
     }
   };
 
-  const send = async (via) => {
+  const send = async () => {
     setBusy('send');
     setError(null);
     try {
-      setMode(await sendCode(via, via === 'phone' ? phone : email));
-      setChannel(via);
+      setMode(await sendCode(email));
       setCode('');
       setCodeState('idle');
       setWait(RESEND_AFTER);
@@ -167,7 +164,7 @@ export default function AccountScreen() {
       warn();
       const secs = waitSeconds(e);
       if (secs) setWait(secs);
-      setError(secs ? `Wait ${secs} seconds, then ask for a new code.` : explain(e, via === 'phone' ? 'Phone' : 'Email'), e);
+      setError(secs ? `Wait ${secs} seconds, then ask for a new code.` : explain(e, 'Email'), e);
     } finally {
       setBusy(null);
     }
@@ -178,7 +175,7 @@ export default function AccountScreen() {
     setBusy('verify');
     setError(null);
     try {
-      const user = await verifyCode(channel, channel === 'phone' ? phone : email, value, mode);
+      const user = await verifyCode(email, value, mode);
       setCodeState('done');
       await finish(user);
     } catch (e) {
@@ -192,9 +189,7 @@ export default function AccountScreen() {
   };
 
   const field = [type.body, styles.input, { color: colors.textPrimary, borderColor: colors.border, backgroundColor: colors.surface }];
-  const sentTo = channel === 'phone'
-    ? `+91 ${phoneDigits(phone).replace(/(\d{5})(\d{5})/, '$1 $2')}`
-    : email.trim();
+  const sentTo = email.trim();
 
   let body;
   if (step === 'choose') {
@@ -214,28 +209,12 @@ export default function AccountScreen() {
         <View style={styles.methods}>
           <Method icon="google" label="Continue with Google" onPress={() => oauth('google', 'Google')} ready={!!providers.google} busy={busy === 'google'} colors={colors} delay={60} />
           <Method icon="github" label="Continue with GitHub" onPress={() => oauth('github', 'GitHub')} ready={!!providers.github} busy={busy === 'github'} colors={colors} delay={110} dark />
-          <Method
-            icon="cellphone"
-            label="Continue with phone"
-            onPress={() => {
-              if (!providers.phone) {
-                warn();
-                setNote('Phone sign-in is almost ready. Use email for now.');
-                return;
-              }
-              tap();
-              go('phone');
-            }}
-            ready={!!providers.phone}
-            colors={colors}
-            delay={160}
-          />
-          <Method icon="email-outline" label="Continue with email" onPress={() => { tap(); go('email'); }} ready colors={colors} delay={210} />
+          <Method icon="email-outline" label="Continue with email" onPress={() => { tap(); go('email'); }} ready colors={colors} delay={160} />
         </View>
         {note ? <Animated.Text entering={FadeIn} style={[type.body, styles.center, { color: colors.soon }]}>{note}</Animated.Text> : null}
         <ErrorText error={error} detail={detail} colors={colors} center />
         <Text style={[type.meta, styles.center, { color: colors.textSecondary }]}>
-          No password needed. We use your email or number only to sign you in.
+          No password needed. We use your email only to sign you in.
         </Text>
       </Animated.View>
     );
@@ -254,43 +233,14 @@ export default function AccountScreen() {
           textContentType="emailAddress"
           keyboardType="email-address"
           returnKeyType="send"
-          onSubmitEditing={() => isEmail(email) && !busy && send('email')}
+          onSubmitEditing={() => isEmail(email) && !busy && send()}
           placeholder="you@college.edu"
           placeholderTextColor={colors.textSecondary}
           style={field}
           accessibilityLabel="Email"
         />
         <ErrorText error={error} detail={detail} colors={colors} />
-        <Button label={busy === 'send' ? 'Sending…' : 'Send code'} onPress={() => send('email')} disabled={!!busy || !isEmail(email)} />
-      </Animated.View>
-    );
-  } else if (step === 'phone') {
-    body = (
-      <Animated.View key="phone" entering={enter} exiting={leave} style={styles.step}>
-        <Text style={[type.screenTitle, { color: colors.textPrimary }]} accessibilityRole="header">Your mobile number</Text>
-        <Text style={[type.body, { color: colors.textSecondary }]}>We'll text a 6-digit code to it. Indian numbers only for now.</Text>
-        <View style={styles.phoneRow}>
-          <View style={[styles.prefix, { borderColor: colors.border, backgroundColor: colors.surfaceSoft }]}>
-            <Text style={[type.body, { color: colors.textPrimary }]}>+91</Text>
-          </View>
-          <TextInput
-            value={phone}
-            onChangeText={(t) => { setPhone(t.replace(/[^\d ]/g, '')); setError(null); }}
-            autoFocus
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            textContentType="telephoneNumber"
-            maxLength={12}
-            returnKeyType="send"
-            onSubmitEditing={() => isIndianMobile(phone) && !busy && send('phone')}
-            placeholder="98765 43210"
-            placeholderTextColor={colors.textSecondary}
-            style={[field, styles.phoneInput]}
-            accessibilityLabel="Mobile number"
-          />
-        </View>
-        <ErrorText error={error} detail={detail} colors={colors} />
-        <Button label={busy === 'send' ? 'Sending…' : 'Send code'} onPress={() => send('phone')} disabled={!!busy || !isIndianMobile(phone)} />
+        <Button label={busy === 'send' ? 'Sending…' : 'Send code'} onPress={() => send()} disabled={!!busy || !isEmail(email)} />
       </Animated.View>
     );
   } else if (step === 'code') {
@@ -299,7 +249,7 @@ export default function AccountScreen() {
         <Text style={[type.screenTitle, { color: colors.textPrimary }]} accessibilityRole="header">Enter the code</Text>
         <Text style={[type.body, { color: colors.textSecondary }]}>
           Sent to <Text style={{ color: colors.textPrimary, fontWeight: '600' }}>{sentTo}</Text>
-          {channel === 'email' ? '. It can take a minute; check spam too.' : '.'}
+          . It can take a minute; check spam too.
         </Text>
         <CodeInput
           ref={codeRef}
@@ -312,11 +262,11 @@ export default function AccountScreen() {
         <ErrorText error={error} detail={detail} colors={colors} />
         <Button label={busy === 'verify' ? 'Checking…' : 'Verify'} onPress={() => verify()} disabled={!!busy || code.length < CODE_LENGTH} />
         <View style={styles.links}>
-          <Button label={channel === 'phone' ? 'Change number' : 'Change email'} variant="text" onPress={() => go(channel)} />
+          <Button label="Change email" variant="text" onPress={() => go('email')} />
           <Button
             label={wait ? `Resend in 0:${String(wait).padStart(2, '0')}` : 'Resend code'}
             variant="text"
-            onPress={() => send(channel)}
+            onPress={() => send()}
             disabled={!!wait || !!busy}
           />
         </View>
@@ -340,7 +290,7 @@ export default function AccountScreen() {
     );
   }
 
-  const canStepBack = step === 'email' || step === 'phone' || step === 'code';
+  const canStepBack = step === 'email' || step === 'code';
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { backgroundColor: colors.background, paddingTop: insets.top }]}>
       <View style={styles.bar}>
@@ -350,7 +300,7 @@ export default function AccountScreen() {
             label={canStepBack ? 'Back' : 'Close'}
             onPress={() => {
               select();
-              if (canStepBack) go(step === 'code' ? channel : 'choose');
+              if (canStepBack) go(step === 'code' ? 'email' : 'choose');
               else router.back();
             }}
           />
@@ -382,9 +332,6 @@ const styles = StyleSheet.create({
   methodEnd: { width: 22 },
   soon: { borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: 2 },
   input: { borderWidth: 1, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md },
-  phoneRow: { flexDirection: 'row', gap: space.sm },
-  prefix: { borderWidth: 1, borderRadius: radius.button, minHeight: 52, paddingHorizontal: space.md, justifyContent: 'center' },
-  phoneInput: { flex: 1, letterSpacing: 1 },
   links: { flexDirection: 'row', justifyContent: 'space-between' },
   errorBox: { gap: 2 },
   done: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, paddingBottom: 80 },
