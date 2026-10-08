@@ -21,6 +21,12 @@ export const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test((s || '').tri
 export const phoneDigits = (s) => (s || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
 export const isIndianMobile = (s) => /^[6-9]\d{9}$/.test(phoneDigits(s));
 export const fullPhone = (s) => `+91${phoneDigits(s)}`;
+// Supabase's own gap between two codes to one number ("...only request this after 42 seconds"):
+// the screen counts that down instead of failing a "Resend" tapped after our 30 s.
+export const waitSeconds = (error) => {
+  const m = /after (\d+) seconds?/i.exec(error?.message || '');
+  return m ? Number(m[1]) : null;
+};
 
 // Which sign-in methods the server has switched on ({ google, github, phone, email }), so a method that
 // isn't set up yet is shown as "soon" instead of failing. Public endpoint, no user data.
