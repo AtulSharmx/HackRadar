@@ -33,7 +33,7 @@ export default function TabLayout() {
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
         headerStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
-        headerTitleAlign: 'center', // user preference (29 Sep): title centered, sync indicator stays right
+        headerTitleAlign: 'left', // back to the brief's left title (user, 8 Oct); sync indicator stays right
         headerTintColor: colors.textPrimary,
         headerTitleStyle: { fontSize: 22, fontWeight: '600' },
         sceneStyle: { backgroundColor: colors.background },

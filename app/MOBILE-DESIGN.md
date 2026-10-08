@@ -39,7 +39,8 @@ max taps to any core screen: 2
 - System font (Roboto). Brief-listed muted color changed for contrast (see theme.js comments).
 - No gradients, illustrations, emoji, stock images, exclamation marks (except the one welcome line).
 - Third tab is "Profile" (user's choice, 1 Oct): it holds the account and the feed preferences.
-- Deviation from the brief, user's choice (29 Sep): tab header titles are centered ("HackRadar" on Feed), not left.
+- Tab header titles are left-aligned as in the brief (centered 29 Sep, back to left 8 Oct by the user).
+- Feed tab tapped again: once scrolls to the top, twice quickly starts over (refresh, no filters, default sort).
 - Deviation from the brief, user's choice (30 Sep): light theme only; the dark theme was removed.
 - Profile shows every choice in place (chips, Segmented); bottom sheets are for Feed filters and sort only.
 - Feed top (user's choice, 1 Oct): search, then ONE chip row: Filters · Sort · City (action chips with an
