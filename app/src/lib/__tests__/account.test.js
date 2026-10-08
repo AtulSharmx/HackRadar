@@ -2,7 +2,7 @@ jest.mock('../supabase', () => ({ supabase: {} }));
 jest.mock('expo-linking', () => ({ createURL: () => 'hackradar://auth-callback', addEventListener: () => ({ remove() {} }) }));
 jest.mock('expo-web-browser', () => ({}));
 
-import { explain, fullPhone, isEmail, isIndianMobile, paramsOf } from '../account';
+import { explain, fullPhone, isEmail, isIndianMobile, paramsOf, waitSeconds } from '../account';
 
 test('the OAuth answer is read from the query or the fragment', () => {
   expect(paramsOf('hackradar://auth-callback?code=abc123')).toEqual({ code: 'abc123' });
@@ -30,4 +30,10 @@ test('errors in plain words', () => {
 
 test('manual linking off reads as a setting, not a broken app', () => {
   expect(explain({ message: 'Manual linking is disabled' }, 'Google')).toMatch(/one more server setting/);
+});
+
+test('the server gap between two codes is read so the screen can count it down', () => {
+  expect(waitSeconds({ message: 'For security purposes, you can only request this after 42 seconds.' })).toBe(42);
+  expect(waitSeconds({ message: 'Invalid phone number' })).toBe(null);
+  expect(waitSeconds(null)).toBe(null);
 });

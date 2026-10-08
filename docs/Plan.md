@@ -155,3 +155,10 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   stays one tap away). EAS Update added (expo-updates, channels, runtimeVersion "fingerprint"): JS-only
   changes ship with `eas update --channel preview --environment preview`; installed apps take them on the
   next launch. Native changes (new native package, app.json plugins) still need a new APK.
+- 8 Oct 2026, phone OTP (D1 rest): Supabase phone login through the Auth "Send SMS" hook, delivered by
+  Fast2SMS (Edge Function supabase/functions/send-sms, JWT off, Standard Webhooks signature). Supabase makes
+  and checks the 6-digit code (its hook schema fixes 6 digits), so the existing phone screen and its 30 s
+  resend timer just work; when Supabase asks for a longer gap the screen counts that down instead.
+  Key check: `python scripts/fast2sms_check.py` (wallet only) or `--send <mobile>` (one test OTP).
+  Owner steps: deploy the function in the dashboard editor, secrets FAST2SMS_API_KEY and
+  SEND_SMS_HOOK_SECRET, enable the Send SMS hook and the Phone provider.

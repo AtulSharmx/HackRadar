@@ -12,7 +12,7 @@ import PressableScale from '../components/PressableScale';
 import RadarPing from '../components/RadarPing';
 import {
   CODE_LENGTH, explain, fullPhone, getProviders, isEmail, isIndianMobile, phoneDigits, RESEND_AFTER,
-  detailOf, savedPrefsOf, sendCode, signInWithProvider, verifyCode,
+  detailOf, savedPrefsOf, sendCode, signInWithProvider, verifyCode, waitSeconds,
 } from '../lib/account';
 import { select, success, tap, warn } from '../lib/haptics';
 import { usePrefs } from '../lib/prefs';
@@ -165,7 +165,9 @@ export default function AccountScreen() {
       go('code');
     } catch (e) {
       warn();
-      setError(explain(e, via === 'phone' ? 'Phone' : 'Email'), e);
+      const secs = waitSeconds(e);
+      if (secs) setWait(secs);
+      setError(secs ? `Wait ${secs} seconds, then ask for a new code.` : explain(e, via === 'phone' ? 'Phone' : 'Email'), e);
     } finally {
       setBusy(null);
     }
