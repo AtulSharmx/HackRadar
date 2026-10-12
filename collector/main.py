@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 
-from . import config, geocode, health, notify, push, quality
+from . import community, config, geocode, health, notify, push, quality
 from .adapters import ADAPTERS
 from .db import Db
 from .http_client import Client
@@ -80,6 +80,12 @@ def main() -> int:
                 traceback.print_exc()
                 stats[a.name]["enrich"] = {"error": f"{type(exc).__name__}: {exc}"[:200]}
         all_events += events
+    try:   # approved submissions go through the same sync as every platform (dedupe, trust, alerts)
+        submitted = community.events(db)
+        all_events += submitted
+        print(f"community: {len(submitted)} approved submissions open")
+    except Exception:
+        traceback.print_exc()
     new, n_changes, new_ids = sync(db, all_events, down={n for n, s in stats.items() if not s['ok']})
     for name, s in stats.items():
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
@@ -103,6 +109,10 @@ def main() -> int:
         print(f"telegram: {notify.new_matches(db, new_ids)} new matches")
         print(f"push: {notify.push_new_matches(db, new_ids)} new-match pushes")
         print(f"saved-event change alerts: {notify.saved_changes(db)}")
+    except Exception:
+        traceback.print_exc()
+    try:   # new submissions and reports to the admin's Telegram
+        print(f"admin queue: {community.admin_queue(db)} items")
     except Exception:
         traceback.print_exc()
     try:   # a broken health check must not fail an otherwise good run

@@ -46,6 +46,12 @@ const writeLock = (on) => {
   }
 };
 
+// Deleting the account signs out too, but there is no account left to sign back in to: no lock then.
+let accountDeleted = false;
+export const markAccountDeleted = () => {
+  accountDeleted = true;
+};
+
 const SessionContext = createContext({ user: null, error: null, retry: () => {}, isGuest: true, email: null, mustSignIn: false });
 
 export function useSession() {
@@ -90,7 +96,8 @@ export function SessionProvider({ children }) {
       // supabase-js: no awaited supabase calls inside this callback, so the follow-up work is deferred
       setTimeout(() => {
         if (event === 'SIGNED_OUT') {
-          if (current.current && !current.current.is_anonymous) lock(true);
+          if (current.current && !current.current.is_anonymous && !accountDeleted) lock(true);
+          accountDeleted = false;
           ready.current = false;
           setState({ user: null, error: null });
           retry(); // back to a fresh guest

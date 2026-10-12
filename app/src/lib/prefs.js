@@ -60,7 +60,7 @@ function write(v) {
   }
 }
 
-const PrefsContext = createContext({ prefs: null, onboarded: false, save: () => {}, update: () => {} });
+const PrefsContext = createContext({ prefs: null, onboarded: false, save: () => {}, update: () => {}, clear: () => {} });
 
 export function usePrefs() {
   return useContext(PrefsContext);
@@ -113,9 +113,19 @@ export function PrefsProvider({ children }) {
     return next;
   }), []);
 
+  // after "Delete my account": nothing of mine stays on this phone, so the app starts at onboarding
+  const clear = useCallback(() => {
+    try {
+      globalThis.localStorage?.removeItem(KEY);
+    } catch {
+      // memory only
+    }
+    setState({ prefs: null, dirty: false });
+  }, []);
+
   return createElement(
     PrefsContext.Provider,
-    { value: { prefs: state.prefs, onboarded: !!state.prefs, save, update } },
+    { value: { prefs: state.prefs, onboarded: !!state.prefs, save, update, clear } },
     children,
   );
 }

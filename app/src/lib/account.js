@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
+import { markAccountDeleted } from './session';
 import { supabase } from './supabase';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -14,6 +15,9 @@ const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 // Google Cloud "Web application" OAuth client id (public, not a secret): native Google sign-in asks Google
 // for an ID token addressed to it, and Supabase's Google provider lists the same id
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+
+// Privacy policy + how to delete the account (site/index.html on EAS Hosting; the Play listing links it too)
+export const PRIVACY_URL = 'https://hackradar.expo.app';
 
 export const RESEND_AFTER = 30; // seconds before "Resend code" works again
 export const CODE_LENGTH = 6;
@@ -262,6 +266,15 @@ export function explain(error, what = 'That') {
 export function detailOf(error) {
   const d = `${error?.message || error || ''}`.trim();
   return d ? d.slice(0, 160) : null;
+}
+
+// Profile > Delete my account (Play Store requirement): the account and every row tied to it are
+// deleted on the server (delete_my_account, migration 0016), then this phone signs out. Works for guests too.
+export async function deleteAccount() {
+  const { error } = await supabase.rpc('delete_my_account');
+  if (error) throw error;
+  markAccountDeleted();
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {}); // the session is already invalid
 }
 
 export async function logOut() {
