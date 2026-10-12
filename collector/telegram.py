@@ -9,6 +9,11 @@ def esc(text) -> str:
     return html.escape(str(text), quote=False)
 
 
+def esc_attr(text) -> str:
+    """For values inside an attribute (href="..."): quotes escaped too, so a link can't break out."""
+    return html.escape(str(text), quote=True)
+
+
 def send(text_html: str) -> bool:
     token, chat = os.environ.get("TELEGRAM_BOT_TOKEN"), os.environ.get("TELEGRAM_CHAT_ID")
     if not (token and chat):

@@ -2,9 +2,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
+import BatteryTip from '../../components/BatteryTip';
 import Button from '../../components/Button';
 import Chip from '../../components/Chip';
 import CitySearch from '../../components/CitySearch';
@@ -143,6 +144,7 @@ export default function SettingsScreen() {
   const [lastThemeNote, setLastThemeNote] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [batteryOpen, setBatteryOpen] = useState(false);
 
   if (!prefs) return null; // onboarding not finished: this tab isn't reachable then
   const update = (patch) => save({ ...prefs, ...patch });
@@ -285,6 +287,9 @@ export default function SettingsScreen() {
               />
             ) : null}
             <SwitchRow label="Deadline reminders" hint="7 days, 48 h and 24 h before a saved deadline" value={!!prefs.notifications} onChange={setNotifications} />
+            {Platform.OS === 'android' && (prefs.notifications || prefs.match_alerts) ? (
+              <LinkRow icon="battery-heart-variant" label="Reminders arriving late? Fix battery settings" onPress={() => setBatteryOpen(true)} colors={colors} />
+            ) : null}
             <SwitchRow
               label="Hide events with warnings"
               hint="Flagged for a high fee with no prize, no organizer or odd dates"
@@ -309,6 +314,7 @@ export default function SettingsScreen() {
         <Text style={[type.meta, styles.version, { color: colors.textSecondary }]}>{versionLine()}</Text>
       </ScrollView>
 
+      <BatteryTip visible={batteryOpen} onClose={() => setBatteryOpen(false)} />
       <CitySearch
         visible={cityOpen}
         onClose={() => setCityOpen(false)}

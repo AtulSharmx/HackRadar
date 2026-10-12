@@ -103,6 +103,10 @@ def main() -> int:
         c = rest(tok_c)
         check("signed-in account submits (sanity)", c.post("/submissions", json=sub).status_code == 201)
         check("submit as already approved", blocked(c.post("/submissions", json={**sub, "status": "approved"})))
+        check("backdate a submission past the daily limit",
+              blocked(c.post("/submissions", json={**sub, "created_at": "2020-01-01T00:00:00Z"})))
+        check("submit a link with quotes in it",
+              blocked(c.post("/submissions", json={**sub, "registration_url": 'https://a.io/x"><b>y'})))
         for _ in range(4):
             c.post("/submissions", json=sub)
         check("6th submission in a day", blocked(c.post("/submissions", json=sub)))
