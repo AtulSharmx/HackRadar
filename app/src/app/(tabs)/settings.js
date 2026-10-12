@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import Button from '../../components/Button';
 import Chip from '../../components/Chip';
@@ -13,7 +13,7 @@ import { useToast } from '../../components/Toast';
 import { explain, logOut } from '../../lib/account';
 import { versionLine } from '../../lib/appUpdates';
 import { select, success } from '../../lib/haptics';
-import { DEGREES, THEMES, yearOptions } from '../../lib/labels';
+import { DEGREES, THEMES } from '../../lib/labels';
 import { turnOnNotifications } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
 import { registerPush, usePushStatus } from '../../lib/push';
@@ -131,12 +131,7 @@ export default function SettingsScreen() {
     update({ themes: themes.includes(k) ? themes.filter((t) => t !== k) : [...themes, k] });
   };
   const modeKey = Object.keys(MODE_LISTS).find((k) => same(prefs.modes || [], MODE_LISTS[k])) || 'both';
-  const years = yearOptions(prefs.degree);
-  const pickDegree = (key) => {
-    const next = prefs.degree === key ? null : key;
-    const stillValid = yearOptions(next).some(([y]) => y === prefs.year); // Year 4 doesn't exist for MCA
-    update({ degree: next, year: stillValid ? prefs.year : null });
-  };
+  const pickDegree = (key) => update({ degree: prefs.degree === key ? null : key });
 
   const setNotifications = (on) => (on ? turnOnNotifications(patchPrefs, toast) : update({ notifications: false }));
   const setMatchAlerts = (on) => (on ? turnOnNotifications(patchPrefs, toast, 'match_alerts') : update({ match_alerts: false }));
@@ -179,14 +174,14 @@ export default function SettingsScreen() {
         <Section title="YOUR FEED" colors={colors}>
           <Item
             label="Interests"
-            hint={lastThemeNote ? 'Keep at least one. Pick another before removing this one.' : 'Your Feed opens with these.'}
+            hint={lastThemeNote ? 'Keep at least one. Pick another before removing this one.' : 'These come first in your Feed and decide your alerts.'}
             colors={colors}
           >
             <View style={styles.chips}>
               {THEMES.map(([k, label]) => chip(themes.includes(k), label, () => toggleTheme(k), 'checkbox'))}
             </View>
           </Item>
-          <Item label="How you want to join" hint={prefs.lat == null ? 'Until your city is set, the Feed shows online events.' : null} colors={colors}>
+          <Item label="How you want to join" hint={prefs.lat == null ? 'Set your city so nearby offline events rank higher.' : 'Used for your alerts.'} colors={colors}>
             <Segmented options={MODES} value={modeKey} onChange={(k) => update({ modes: MODE_LISTS[k] })} accessibilityLabel="How you want to join" />
           </Item>
           <Item label="Fee" colors={colors} last>
@@ -214,24 +209,15 @@ export default function SettingsScreen() {
             </View>
             <Text style={[type.label, { color: colors.brand }]} maxFontSizeMultiplier={CHROME_MAX_SCALE}>{prefs.city ? 'Change' : 'Set'}</Text>
           </Pressable>
-          <Item label="How far you can travel (km)" hint={prefs.lat == null ? 'Applies once your city is set.' : null} colors={colors} last>
+          <Item label="How far you can travel (km)" hint={prefs.lat == null ? 'Applies once your city is set.' : 'Closer events rank higher; alerts stay within this.'} colors={colors} last>
             <Segmented options={DISTANCES} value={prefs.max_km ?? null} onChange={(km) => update({ max_km: km })} accessibilityLabel="How far you can travel" />
           </Item>
         </Section>
 
         <Section title="YOUR STUDIES" colors={colors}>
-          <Item label="Degree" colors={colors} last={!years.length}>
+          <Item label="Degree" hint="Hackathons not open to your degree (like school-only ones) stay hidden." colors={colors} last>
             <View style={styles.chips}>{DEGREES.map((d) => chip(prefs.degree === d.key, d.label, () => pickDegree(d.key)))}</View>
           </Item>
-          {years.length ? (
-            <Animated.View entering={FadeIn.duration(motion.base)} exiting={FadeOut.duration(motion.fast)}>
-              <Item label="Year" colors={colors} last>
-                <View style={styles.chips}>
-                  {years.map(([y, label]) => chip(prefs.year === y, label, () => update({ year: prefs.year === y ? null : y })))}
-                </View>
-              </Item>
-            </Animated.View>
-          ) : null}
         </Section>
 
         <Section title="NOTIFICATIONS AND FEED" colors={colors}>

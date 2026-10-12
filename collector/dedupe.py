@@ -108,4 +108,8 @@ def merge(rows: list[dict], existing: dict | None = None) -> dict:
         out[k] = next((r[k] for r in ordered if r.get(k) not in (None, [], "")), rows[0][k])
     themes = sorted({t for r in rows for t in r.get("themes") or []})
     out["themes"] = [t for t in themes if t != "other"] or themes or ["other"]
+    # [] is a real answer here ("no college student"), not a missing value: take the first source that says
+    elig = [r["eligible_degrees"] for r in rows if r.get("eligible_degrees") is not None]
+    if "eligible_degrees" in out:
+        out["eligible_degrees"] = elig[0] if elig else None
     return out

@@ -4,110 +4,582 @@
   "device": {
     "lat_rounded": 28.46,
     "lng_rounded": 77.03,
-    "prefs": {"themes": ["ai_ml", "cybersecurity"], "modes": ["online", "offline", "hybrid"], "fee_max": 500, "max_km": 50, "hide_warnings": false},
+    "prefs": {
+      "themes": [
+        "ai_ml",
+        "cybersecurity"
+      ],
+      "modes": [
+        "online",
+        "offline",
+        "hybrid"
+      ],
+      "fee_max": 500,
+      "max_km": 50,
+      "hide_warnings": false
+    },
     "alert_filter": null
   },
   "cases": [
     {
       "name": "online AI, free, closes in 5 days, trusted: perfect score",
-      "event": {"mode": "online", "themes": ["ai_ml"], "fee_amount": 0, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": true, "score": 100, "why": "35 + 25 + 15 + 15 + 10"}
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": true,
+        "score": 100,
+        "why": "35 + 25 + 15 + 15 + 10"
+      }
     },
     {
       "name": "offline DTU Delhi ~33 km, fee 300, 20 days, check_details",
-      "event": {"mode": "offline", "themes": ["cybersecurity"], "fee_amount": 300, "lat": 28.75, "lng": 77.11, "registration_deadline": "2026-10-19T06:30:00+00:00", "trust_label": "check_details"},
-      "expect": {"matches": true, "score": 81, "why": "35 + 25 (within 50 km) + 8 (fee <= 500) + 8 (11-30 days) + 5"}
+      "event": {
+        "mode": "offline",
+        "themes": [
+          "cybersecurity"
+        ],
+        "fee_amount": 300,
+        "lat": 28.75,
+        "lng": 77.11,
+        "registration_deadline": "2026-10-19T06:30:00+00:00",
+        "trust_label": "check_details"
+      },
+      "expect": {
+        "matches": true,
+        "score": 81,
+        "why": "35 + 25 (within 50 km) + 8 (fee <= 500) + 8 (11-30 days) + 5"
+      }
     },
     {
       "name": "offline Mumbai: too far for alerts, still scored",
-      "event": {"mode": "offline", "themes": ["ai_ml"], "fee_amount": 0, "lat": 19.05, "lng": 72.87, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 75, "why": "35 + 0 (over 100 km) + 15 + 15 + 10"}
+      "event": {
+        "mode": "offline",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "lat": 19.05,
+        "lng": 72.87,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 75,
+        "why": "35 + 0 (over 100 km) + 15 + 15 + 10"
+      }
     },
     {
       "name": "offline Sonipat ~59.5 km: partial distance points, closes tomorrow",
-      "event": {"mode": "offline", "themes": ["web"], "fee_amount": 0, "lat": 28.9954, "lng": 77.0234, "registration_deadline": "2026-09-30T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 45, "why": "0 (theme) + 25*(100-59.5)/50 = 20.25 + 15 + 0 (under 2 days) + 10 = 45.25; also fails themes and 50 km"}
+      "event": {
+        "mode": "offline",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": 0,
+        "lat": 28.9954,
+        "lng": 77.0234,
+        "registration_deadline": "2026-09-30T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 45,
+        "why": "0 (theme) + 25*(100-59.5)/50 = 20.25 + 15 + 0 (under 2 days) + 10 = 45.25; also fails themes and 50 km"
+      }
     },
     {
       "name": "unknown fee passes a free-only alert filter",
-      "device": {"alert_filter": {"themes": ["ai_ml"], "fee_max": 0, "max_km": 50}},
-      "event": {"mode": "online", "themes": ["ai_ml"], "fee_amount": null, "registration_deadline": "2026-10-11T06:30:00+00:00", "trust_label": "check_details"},
-      "expect": {"matches": true, "score": 73, "why": "35 + 25 + 0 (fee unknown) + 8 (12 days) + 5"}
+      "device": {
+        "alert_filter": {
+          "themes": [
+            "ai_ml"
+          ],
+          "fee_max": 0,
+          "max_km": 50
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": null,
+        "registration_deadline": "2026-10-11T06:30:00+00:00",
+        "trust_label": "check_details"
+      },
+      "expect": {
+        "matches": true,
+        "score": 73,
+        "why": "35 + 25 + 0 (fee unknown) + 8 (12 days) + 5"
+      }
     },
     {
       "name": "fee 800 above fee_max 500",
-      "event": {"mode": "offline", "themes": ["cybersecurity"], "fee_amount": 800, "prize_amount_inr": 100000, "lat": 28.4646, "lng": 77.0299, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 85, "why": "35 + 25 + 0 (fee > 500) + 15 + 10"}
+      "event": {
+        "mode": "offline",
+        "themes": [
+          "cybersecurity"
+        ],
+        "fee_amount": 800,
+        "prize_amount_inr": 100000,
+        "lat": 28.4646,
+        "lng": 77.0299,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 85,
+        "why": "35 + 25 + 0 (fee > 500) + 15 + 10"
+      }
     },
     {
       "name": "warning hidden when hide_warnings is on",
-      "device": {"prefs": {"themes": ["ai_ml", "cybersecurity"], "modes": ["online", "offline", "hybrid"], "fee_max": 500, "max_km": 50, "hide_warnings": true}},
-      "event": {"mode": "online", "themes": ["ai_ml"], "fee_amount": 0, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "warning"},
-      "expect": {"matches": false, "score": 90, "why": "35 + 25 + 15 + 15 + 0 (warning)"}
+      "device": {
+        "prefs": {
+          "themes": [
+            "ai_ml",
+            "cybersecurity"
+          ],
+          "modes": [
+            "online",
+            "offline",
+            "hybrid"
+          ],
+          "fee_max": 500,
+          "max_km": 50,
+          "hide_warnings": true
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "warning"
+      },
+      "expect": {
+        "matches": false,
+        "score": 90,
+        "why": "35 + 25 + 15 + 15 + 0 (warning)"
+      }
     },
     {
       "name": "solo_only needs solo_allowed known to be true",
-      "device": {"alert_filter": {"solo_only": true}},
-      "event": {"mode": "online", "themes": ["ai_ml"], "fee_amount": 0, "solo_allowed": null, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 100, "why": "35 + 25 + 15 + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "solo_only": true
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "solo_allowed": null,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 100,
+        "why": "35 + 25 + 15 + 15 + 10"
+      }
     },
     {
       "name": "closing within 7 days, closes in 3",
-      "device": {"alert_filter": {"closing_within_days": 7}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-02T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": true, "score": 65, "why": "0 + 25 + 15 + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "closing_within_days": 7
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-02T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": true,
+        "score": 65,
+        "why": "0 + 25 + 15 + 15 + 10"
+      }
     },
     {
       "name": "hybrid in Bengaluru: distance filter doesn't apply",
-      "event": {"mode": "hybrid", "themes": ["ai_ml"], "fee_amount": null, "lat": 12.97, "lng": 77.59, "registration_deadline": "2026-10-24T06:30:00+00:00", "trust_label": "check_details"},
-      "expect": {"matches": true, "score": 73, "why": "35 + 25 (hybrid) + 0 + 8 (25 days) + 5"}
+      "event": {
+        "mode": "hybrid",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": null,
+        "lat": 12.97,
+        "lng": 77.59,
+        "registration_deadline": "2026-10-24T06:30:00+00:00",
+        "trust_label": "check_details"
+      },
+      "expect": {
+        "matches": true,
+        "score": 73,
+        "why": "35 + 25 (hybrid) + 0 + 8 (25 days) + 5"
+      }
     },
     {
       "name": "deadline already passed",
-      "event": {"mode": "online", "themes": ["ai_ml"], "fee_amount": 0, "registration_deadline": "2026-09-28T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 85, "why": "35 + 25 + 15 + 0 (passed) + 10"}
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-09-28T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 85,
+        "why": "35 + 25 + 15 + 0 (passed) + 10"
+      }
     },
     {
       "name": "Paid filter keeps an event with a listed fee",
-      "device": {"alert_filter": {"paid_only": true}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": 300, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": true, "score": 58, "why": "0 (theme) + 25 + 8 (fee <= 500) + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "paid_only": true
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": 300,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": true,
+        "score": 58,
+        "why": "0 (theme) + 25 + 8 (fee <= 500) + 15 + 10"
+      }
     },
     {
       "name": "Paid filter drops a free event",
-      "device": {"alert_filter": {"paid_only": true}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 65, "why": "0 + 25 + 15 + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "paid_only": true
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 65,
+        "why": "0 + 25 + 15 + 15 + 10"
+      }
     },
     {
       "name": "Paid filter drops an event whose fee isn't listed",
-      "device": {"alert_filter": {"paid_only": true}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": null, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 50, "why": "0 + 25 + 0 (fee unknown) + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "paid_only": true
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": null,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 50,
+        "why": "0 + 25 + 0 (fee unknown) + 15 + 10"
+      }
     },
     {
       "name": "source says paid but gives no amount: shown under Paid",
-      "device": {"alert_filter": {"paid_only": true}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": null, "is_paid": true, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": true, "score": 50, "why": "0 + 25 + 0 (amount unknown) + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "paid_only": true
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": null,
+        "is_paid": true,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": true,
+        "score": 50,
+        "why": "0 + 25 + 0 (amount unknown) + 15 + 10"
+      }
     },
     {
       "name": "source says paid but gives no amount: hidden under Free",
-      "device": {"alert_filter": {"fee_max": 0}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": null, "is_paid": true, "registration_deadline": "2026-10-04T06:30:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 50, "why": "0 + 25 + 0 (amount unknown) + 15 + 10"}
+      "device": {
+        "alert_filter": {
+          "fee_max": 0
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": null,
+        "is_paid": true,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 50,
+        "why": "0 + 25 + 0 (amount unknown) + 15 + 10"
+      }
     },
     {
       "name": "closing within 7 days counts India calendar days, like the countdown (7.5 days away = '7 days left')",
-      "device": {"alert_filter": {"closing_within_days": 7}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-06T18:29:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": true, "score": 65, "why": "0 + 25 + 15 + 15 (7.5 days) + 10"}
+      "device": {
+        "alert_filter": {
+          "closing_within_days": 7
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-06T18:29:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": true,
+        "score": 65,
+        "why": "0 + 25 + 15 + 15 (7.5 days) + 10"
+      }
     },
     {
       "name": "closing within 7 days drops '8 days left'",
-      "device": {"alert_filter": {"closing_within_days": 7}},
-      "event": {"mode": "online", "themes": ["web"], "fee_amount": 0, "registration_deadline": "2026-10-07T18:29:00+00:00", "trust_label": "trusted_source"},
-      "expect": {"matches": false, "score": 65, "why": "0 + 25 + 15 + 15 (8.5 days) + 10"}
+      "device": {
+        "alert_filter": {
+          "closing_within_days": 7
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "web"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-07T18:29:00+00:00",
+        "trust_label": "trusted_source"
+      },
+      "expect": {
+        "matches": false,
+        "score": 65,
+        "why": "0 + 25 + 15 + 15 (8.5 days) + 10"
+      }
+    },
+    {
+      "name": "school-students-only listing is not shown to a BCA student",
+      "device": {
+        "prefs": {
+          "themes": [
+            "ai_ml",
+            "cybersecurity"
+          ],
+          "modes": [
+            "online",
+            "offline",
+            "hybrid"
+          ],
+          "fee_max": 500,
+          "max_km": 50,
+          "hide_warnings": false,
+          "degree": "bca"
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source",
+        "eligible_degrees": []
+      },
+      "expect": {
+        "matches": false,
+        "score": 100,
+        "why": "eligibility excludes; score unchanged: 35 + 25 + 15 + 15 + 10"
+      }
+    },
+    {
+      "name": "postgraduate-only listing is not shown to a BTech student",
+      "device": {
+        "prefs": {
+          "themes": [
+            "ai_ml",
+            "cybersecurity"
+          ],
+          "modes": [
+            "online",
+            "offline",
+            "hybrid"
+          ],
+          "fee_max": 500,
+          "max_km": 50,
+          "hide_warnings": false,
+          "degree": "btech"
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source",
+        "eligible_degrees": [
+          "mca",
+          "mtech",
+          "other"
+        ]
+      },
+      "expect": {
+        "matches": false,
+        "score": 100,
+        "why": "eligibility excludes; 35 + 25 + 15 + 15 + 10"
+      }
+    },
+    {
+      "name": "undergraduate listing is shown to a BCA student",
+      "device": {
+        "prefs": {
+          "themes": [
+            "ai_ml",
+            "cybersecurity"
+          ],
+          "modes": [
+            "online",
+            "offline",
+            "hybrid"
+          ],
+          "fee_max": 500,
+          "max_km": 50,
+          "hide_warnings": false,
+          "degree": "bca"
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source",
+        "eligible_degrees": [
+          "bca",
+          "bsc",
+          "btech",
+          "other"
+        ]
+      },
+      "expect": {
+        "matches": true,
+        "score": 100,
+        "why": "35 + 25 + 15 + 15 + 10"
+      }
+    },
+    {
+      "name": "eligibility off in the filter shows it anyway",
+      "device": {
+        "prefs": {
+          "themes": [
+            "ai_ml",
+            "cybersecurity"
+          ],
+          "modes": [
+            "online",
+            "offline",
+            "hybrid"
+          ],
+          "fee_max": 500,
+          "max_km": 50,
+          "hide_warnings": false,
+          "degree": "bca"
+        },
+        "alert_filter": {
+          "eligible_only": false
+        }
+      },
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source",
+        "eligible_degrees": []
+      },
+      "expect": {
+        "matches": true,
+        "score": 100,
+        "why": "35 + 25 + 15 + 15 + 10"
+      }
+    },
+    {
+      "name": "no degree given: never excluded by eligibility",
+      "event": {
+        "mode": "online",
+        "themes": [
+          "ai_ml"
+        ],
+        "fee_amount": 0,
+        "registration_deadline": "2026-10-04T06:30:00+00:00",
+        "trust_label": "trusted_source",
+        "eligible_degrees": []
+      },
+      "expect": {
+        "matches": true,
+        "score": 100,
+        "why": "35 + 25 + 15 + 15 + 10"
+      }
     }
   ]
 }

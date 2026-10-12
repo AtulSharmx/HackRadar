@@ -12,7 +12,7 @@ test('device row: rounded location, alert filter mirrors answers, alerts follow 
   expect(row.alerts_enabled).toBe(true);
   expect(row.alert_filter).toEqual({
     themes: ['ai_ml'], modes: ['online', 'offline', 'hybrid'], fee_max: 500, max_km: 50,
-    closing_within_days: null, solo_only: false, exclude_warnings: true,
+    closing_within_days: null, solo_only: false, exclude_warnings: true, eligible_only: true,
   });
   expect(row.prefs).not.toHaveProperty('lat');   // raw location never goes into prefs
   expect(row.prefs).not.toHaveProperty('telegram');

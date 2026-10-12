@@ -304,6 +304,7 @@ export default function EventDetail() {
           />
           <Row label="Venue" value={venue} colors={colors} />
           <Row label="Team" value={team || (event.solo_allowed ? 'Solo allowed' : null)} colors={colors} />
+          <Row label="Who can join" value={event.eligibility_text === 'All' ? 'Anyone' : event.eligibility_text} colors={colors} />
           <Row label="Fee" value={feeLong(event.fee_amount, event.is_paid)} colors={colors} />
           <Row label="Prizes" value={prizeLong(event)} colors={colors} />
           <Row label="Eligibility" value={event.eligibility_text} colors={colors} />

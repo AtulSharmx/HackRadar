@@ -18,6 +18,7 @@ import { useToast } from '../../components/Toast';
 import { activeChips, applyView, clearedFilters, defaultFilters, pageOf, SORTS } from '../../lib/feedView';
 import { ago } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
+import { DEGREES } from '../../lib/labels';
 import { select, success, tap } from '../../lib/haptics';
 import { usePrefs } from '../../lib/prefs';
 import { useSaved } from '../../lib/saved';
@@ -105,7 +106,8 @@ export default function FeedScreen() {
     [events, search, filters, sort, prefs, only],
   );
   const { items, page: current, pages } = pageOf(shown, page);
-  const chips = activeChips(filters, !!me);
+  const degree = DEGREES.find((d) => d.key === prefs?.degree);
+  const chips = activeChips(filters, !!me, degree ? (degree.key === 'other' ? 'college students' : degree.label) : null);
   const openCity = () => setSheet('city'); // one sheet at a time: this also closes Filters or Sort
 
   const listRef = useRef(null);

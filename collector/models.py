@@ -36,6 +36,7 @@ class Event:
     prize_amount_inr: int | None = None
     prize_approximate: bool = False
     eligibility_text: str | None = None
+    eligible_degrees: list[str] | None = None   # degree keys allowed; None = anyone/unknown
     source_verified: bool = False          # the platform itself verified this listing (Devfolio "verified")
     rounds: list[dict] = field(default_factory=list)   # [{title, start, end}] UTC iso, from source details
     posted_at: datetime | None = None       # when the listing went up on the source (for "Newest")
