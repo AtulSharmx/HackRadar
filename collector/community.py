@@ -58,8 +58,19 @@ def events(db, now: datetime | None = None) -> list[Event]:
     return [to_event(r) for r in rows]
 
 
+LIMIT = 3900   # Telegram allows 4096 characters per message
+
+
+def _mark(db, table, ids):
+    if ids:
+        quoted = ",".join(f'"{i}"' if table == "submissions" else str(i) for i in ids)
+        db.http.patch(f"/{table}", params={"id": f"in.({quoted})"}, json={"notified": True}).raise_for_status()
+
+
 def admin_queue(db) -> int:
-    """One Telegram message per run with what needs a look; marks everything it sent."""
+    """What needs a look goes to the admin's Telegram, marked only once delivered. Items are never cut:
+    they are packed whole into as many messages as needed (each item is short, every field length-capped
+    in the database and escaped), so no message can carry broken HTML that Telegram would refuse forever."""
     subs = db.select_all("submissions", select="id,title,organizer,mode,city,registration_url,registration_deadline",
                          status="eq.pending", notified="is.false", order="created_at")
     reps = db.select_all("reports", select="id,reason,note,event_id", notified="is.false", order="created_at")
@@ -69,23 +80,30 @@ def admin_queue(db) -> int:
     if reps:
         ids = ",".join(sorted({r["event_id"] for r in reps}))
         titles = {e["id"]: e["title"] for e in db.select_all("events", select="id,title", id=f"in.({ids})")}
-    lines = []
-    if subs:
-        lines.append(f"<b>{len(subs)} hackathon submission{'s' if len(subs) > 1 else ''} to review</b>")
-        for s in subs:
-            where = "Online" if s["mode"] == "online" else s.get("city") or s["mode"]
-            lines.append(f'• {esc(s["title"])} ({esc(s["organizer"])}, {esc(where)}, closes {s["registration_deadline"][:10]})\n'
-                         f'  <a href="{esc_attr(s["registration_url"])}">link</a>')
-        lines.append(f'Approve: set status to approved in <a href="{EDITOR}">submissions</a>.')
-    if reps:
-        lines.append(f"<b>{len(reps)} report{'s' if len(reps) > 1 else ''} of wrong info</b>")
-        for r in reps:
-            note = f": {esc(r['note'])}" if r.get("note") else ""
-            lines.append(f"• {esc(titles.get(r['event_id'], 'removed event'))} — {REASONS.get(r['reason'], r['reason'])}{note}")
-    if not send("\n".join(lines)[:3900]):
-        return 0   # not delivered: leave them unmarked so the next run tries again (review is never skipped)
-    for table, rows in (("submissions", subs), ("reports", reps)):
-        if rows:
-            ids = ",".join(f'"{r["id"]}"' if table == "submissions" else str(r["id"]) for r in rows)
-            db.http.patch(f"/{table}", params={"id": f"in.({ids})"}, json={"notified": True}).raise_for_status()
-    return len(subs) + len(reps)
+    items = []   # (table, id, html line)
+    for s in subs:
+        where = "Online" if s["mode"] == "online" else s.get("city") or s["mode"]
+        items.append(("submissions", s["id"],
+                      f'• {esc(s["title"])} ({esc(s["organizer"])}, {esc(where)}, closes {esc(s["registration_deadline"][:10])})\n'
+                      f'  <a href="{esc_attr(s["registration_url"])}">link</a>'))
+    for r in reps:
+        note = f": {esc(r['note'])}" if r.get("note") else ""
+        items.append(("reports", r["id"],
+                      f"• Report: {esc(titles.get(r['event_id'], 'removed event'))} — {esc(REASONS.get(r['reason'], r['reason']))}{note}"))
+    head = (f"<b>HackRadar: {len(subs)} submission(s) to review, {len(reps)} report(s)</b>\n"
+            f'Approve a submission: set status to approved in <a href="{EDITOR}">submissions</a>.')
+    done = 0
+    while items:
+        msg, batch = head, []
+        while items and len(msg) + len(items[0][2]) + 1 <= LIMIT:
+            msg += "\n" + items[0][2]
+            batch.append(items.pop(0))
+        if not batch:   # one item longer than a message (the database's length caps prevent it): say so, never cut HTML
+            batch.append(items.pop(0))
+            msg = head + f"\n• One {batch[0][0][:-1]} is too long to show here; open the table."
+        if not send(msg):
+            break                  # not delivered: the rest stay unmarked and are tried again next run
+        for table in ("submissions", "reports"):
+            _mark(db, table, [i for t, i, _ in batch if t == table])
+        done += len(batch)
+    return done
