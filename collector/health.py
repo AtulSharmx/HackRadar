@@ -6,6 +6,8 @@ from .normalize import IST
 from .telegram import esc, send
 
 WINDOW_HOURS = float(os.environ.get("HEALTH_WINDOW_HOURS", "48"))
+# Sources whose list is mostly corporate challenges: days with no hackathon are normal, only errors alert
+ZERO_OK = {"hackerearth"}
 
 
 def _ist(ts: str | None) -> str:
@@ -22,7 +24,7 @@ def problems(db, sources: list[str], now: datetime | None = None) -> list[str]:
     for src in sources:
         runs = db.select_all("source_runs", select="run_at,events_found,error_text",
                              source=f"eq.{src}", run_at=f"gte.{since}", order="run_at.desc")
-        zero = runs and all(r["events_found"] == 0 for r in runs)
+        zero = runs and src not in ZERO_OK and all(r["events_found"] == 0 for r in runs)
         erroring = runs and all(r["error_text"] for r in runs)
         if not (zero or erroring):
             continue

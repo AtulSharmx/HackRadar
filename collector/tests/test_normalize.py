@@ -69,7 +69,13 @@ def test_themes_v2_on_real_titles():
     assert classify_themes("Build and Break Hackathon", generic) == ["open_innovation"]
     assert classify_themes("Idea Competition 2026", generic) == ["open_innovation"]
     assert classify_themes("Respawn", ["Game Development"]) == ["other"]   # nothing fits: stays honest
-    # description counts only with an unambiguous phrase
+    # live "other" titles, 12 Oct 2026
+    assert classify_themes("Virtual: PromptWars", generic) == ["ai_ml"]
+    assert classify_themes("Agentic Banking Hackathon", []) == ["ai_ml"]
+    assert classify_themes("The Code Voyage: The Ultimate Coding Battle", generic) == ["coding_contest"]
+    assert classify_themes("C Code Auction Arena 2026", generic) == ["coding_contest"]
+    assert classify_themes("CodeBreaker", generic) == ["coding_contest"]
+    assert classify_themes("National Machine Coding, LLD and Production Debugging Contest", generic) == ["coding_contest"]    # description counts only with an unambiguous phrase
     assert classify_themes("Zero Hour", generic, "Build solutions using machine learning models") == ["ai_ml"]
     assert classify_themes("Zero Hour", generic, "An AI-powered future awaits you") == ["other"]
 

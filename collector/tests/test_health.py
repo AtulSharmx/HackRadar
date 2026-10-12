@@ -38,3 +38,8 @@ def test_errors_every_run_alerts_even_with_events():
 def test_error_text_is_html_escaped():
     db = FakeDb({"unstop": [run(0, "<script>x</script>")]})
     assert "<script>" not in health.problems(db, ["unstop"])[0]
+
+
+def test_hackerearth_without_hackathons_is_normal_but_its_errors_alert():
+    assert health.problems(FakeDb({"hackerearth": [run(0), run(0)]}), ["hackerearth"]) == []
+    assert len(health.problems(FakeDb({"hackerearth": [run(0, "Blocked: HTTP 403")]}), ["hackerearth"])) == 1
