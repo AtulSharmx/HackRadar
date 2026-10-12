@@ -173,6 +173,7 @@ def test_hackerearth_keeps_only_hackathons():
     assert e.registration_deadline == e.end_date == datetime(2026, 11, 13, 18, 29, tzinfo=timezone.utc)
     assert e.start_date == datetime(2026, 10, 5, 14, 30, tzinfo=timezone.utc)
     assert e.organizer is None and e.fee_amount is None and e.prize_amount_inr is None   # not in the list, never guessed
+    assert e.source_verified   # HackerEarth runs it: no "organizer not mentioned" warning
     later = datetime(2099, 1, 1, tzinfo=timezone.utc)   # the fixture's dates pass; the hackathon check must not
     kept = {x.title for x in events if hackerearth.is_relevant(replace(x, registration_deadline=later))}
     assert kept == {"Agentic Banking Hackathon", "GoDaddy Inclusive Innovation Hackathon 2026"}   # hiring challenge dropped
