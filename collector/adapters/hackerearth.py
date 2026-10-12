@@ -37,7 +37,8 @@ def parse(raw: dict) -> Event:
         start_date=parse_date(raw.get("start_utc_tz")),
         end_date=end,
         themes=classify_themes(title, [], raw.get("description")),
-        source_verified=raw.get("is_hackerearth") is True,   # run by HackerEarth itself, like Devfolio's listings
+        # not source_verified: "is_hackerearth" is true on every listing, company-run ones too (GoDaddy, Godrej),
+        # so it says nothing about who runs it. With no organizer the card honestly says so.
     )
 
 
