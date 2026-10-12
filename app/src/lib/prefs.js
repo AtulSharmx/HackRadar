@@ -33,7 +33,7 @@ export function toDeviceRow(p) {
     },
     alert_filter: {
       themes: p.themes, modes: p.modes, fee_max: p.fee_max, max_km: p.max_km,
-      closing_within_days: null, solo_only: false, exclude_warnings: p.hide_warnings,
+      closing_within_days: null, solo_only: false, exclude_warnings: p.hide_warnings, eligible_only: true,
     },
     city: p.city,
     state: p.state,

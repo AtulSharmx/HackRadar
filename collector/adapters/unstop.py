@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from .. import config
 from ..models import Event
-from ..normalize import classify_themes, clean_city, parse_date, strip_html
+from ..normalize import classify_themes, clean_city, degrees_from_unstop, parse_date, strip_html
 
 name = "unstop"
 URL = "https://unstop.com/api/public/opportunity/search-result"
@@ -34,6 +34,10 @@ def _fee(raw) -> int | None:
         return 0
     amounts = [s["amount"] for s in raw.get("payment_services") or [] if isinstance(s.get("amount"), (int, float))]
     return int(min(amounts)) if amounts else None
+
+
+def _eligible(raw) -> list[str]:
+    return [f["name"] for f in raw.get("filters") or [] if f.get("type") == "eligible" and f.get("name")]
 
 
 def parse(raw: dict) -> Event:
@@ -70,8 +74,8 @@ def parse(raw: dict) -> Event:
         is_paid=raw["isPaid"] if isinstance(raw.get("isPaid"), bool) else None,
         prize_text=prize_text,
         prize_amount_inr=prize,
-        eligibility_text=strip_html(", ".join(f["name"] for f in raw.get("filters") or []
-                                              if f.get("type") == "eligible"), 300),
+        eligibility_text=strip_html(", ".join(_eligible(raw)), 300),
+        eligible_degrees=degrees_from_unstop(_eligible(raw)),
         posted_at=parse_date(raw.get("approved_date")),   # when Unstop published it; their own list is newest-first by it
         listing_updated_at=raw.get("updated_at"),
     )

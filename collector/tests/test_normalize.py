@@ -72,3 +72,15 @@ def test_themes_v2_on_real_titles():
     # description counts only with an unambiguous phrase
     assert classify_themes("Zero Hour", generic, "Build solutions using machine learning models") == ["ai_ml"]
     assert classify_themes("Zero Hour", generic, "An AI-powered future awaits you") == ["other"]
+
+
+def test_degrees_from_unstop_eligibility_tags():
+    from collector.normalize import degrees_from_unstop as d
+    assert d(["All"]) is None and d([]) is None                                   # anyone
+    assert d(["School Students"]) == [] and d(["Experienced Professionals", "Fresher"]) == []
+    assert d(["Engineering Students", "Undergraduate"]) == ["bca", "bsc", "btech", "other"]
+    assert d(["Engineering Students", "Postgraduate"]) == ["mca", "mtech", "other"]
+    assert d(["Management", "Law"]) == ["other"]                                  # not for tech degrees
+    full = ["Arts, Commerce, Sciences & Others", "Engineering Students", "Law", "Management",
+            "Medical", "Postgraduate", "Undergraduate"]
+    assert d(full) == ["bca", "bsc", "btech", "mca", "mtech", "other"]

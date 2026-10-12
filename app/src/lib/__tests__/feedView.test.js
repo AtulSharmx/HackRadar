@@ -12,9 +12,14 @@ const E = [
 ];
 const ids = (list) => list.map((e) => e.id);
 
-test('defaults come from my onboarding answers', () => {
+test('the Feed opens with every open hackathon, my interests ranked first', () => {
   const f = defaultFilters(PREFS);
-  expect(ids(applyView(E, { filters: f, prefs: PREFS, now: NOW }))).toEqual(['b', 'c', 'e']); // AI only, Mumbai too far
+  const list = ids(applyView(E, { filters: f, prefs: PREFS, now: NOW }));
+  expect(list.sort()).toEqual(['a', 'b', 'c', 'd', 'e']); // nothing hidden: cyber and far Mumbai too
+  const ranked = ids(applyView(E, { filters: f, prefs: PREFS, now: NOW }));
+  expect(ranked.indexOf('b')).toBeLessThan(ranked.indexOf('a')); // AI (my interest) above cyber
+  expect(ranked.indexOf('c')).toBeLessThan(ranked.indexOf('d')); // near Gurugram above far Mumbai
+  expect(defaultFilters({ ...PREFS, hide_warnings: true }).exclude_warnings).toBe(true); // an explicit "hide" stays
 });
 
 test('from a notification: exactly those events, filters and search set aside, still sorted', () => {
@@ -47,11 +52,14 @@ test('best match: higher score first, closer deadline breaks ties', () => {
   expect(list.indexOf('b')).toBeLessThan(list.indexOf('a')); // AI theme match beats cyber
 });
 
-test('no location yet: online only, and no distance limit that would hide every offline event', () => {
-  const f = defaultFilters({ ...PREFS, lat: null, lng: null, modes: ['online', 'offline', 'hybrid'] });
-  expect(f.modes).toEqual(['online']);
+test('no location yet: offline events still show, ranked after online ones', () => {
+  const noCity = { ...PREFS, lat: null, lng: null };
+  const f = defaultFilters(noCity);
+  expect(f.modes).toEqual(['online', 'offline', 'hybrid']);
   expect(f.max_km).toBeNull();
-  expect(defaultFilters({ ...PREFS, fee_max: 500 }).fee_max).toBeNull(); // old "up to ₹500" answers read as both
+  const list = ids(applyView(E, { filters: f, prefs: noCity, now: NOW }));
+  expect(list).toContain('c');
+  expect(list.indexOf('b')).toBeLessThan(list.indexOf('c'));
 });
 
 test('fee: Free, Paid, Both', () => {
@@ -67,15 +75,16 @@ test('fee: Free, Paid, Both', () => {
 });
 
 test('chips: one per active filter, each removable', () => {
-  const f = { ...defaultFilters(PREFS), fee_max: 0, closing_within_days: 7, exclude_warnings: true, modes: ['online'] };
+  const f = { ...defaultFilters(PREFS), themes: ['ai_ml'], max_km: 50, fee_max: 0, closing_within_days: 7, exclude_warnings: true, modes: ['online'] };
   const chips = activeChips(f, true);
   expect(chips.map((c) => c.label)).toEqual(['AI/ML', 'Online only', 'Free', 'Closing in 7 days', 'No warnings']);
   expect(chips.find((c) => c.key === 'fee').clear(f).fee_max).toBeNull();
-  const paid = activeChips({ ...defaultFilters(PREFS), themes: [], ...FEE_CHOICES.paid }, true);
+  const paid = activeChips({ ...defaultFilters(PREFS), max_km: 50, ...FEE_CHOICES.paid }, true);
   expect(paid.map((c) => c.label)).toEqual(['Paid', 'Within 50 km']);
   expect(feeChoice(paid[0].clear(FEE_CHOICES.paid))).toBe('both');
-  expect(activeChips({ ...defaultFilters(PREFS), themes: [] }, true).map((c) => c.label)).toEqual(['Within 50 km']);
-  expect(activeChips({ ...defaultFilters(PREFS), themes: [] }, false)).toEqual([]); // no location: km chip means nothing
+  expect(activeChips(defaultFilters(PREFS), true)).toEqual([]); // the default Feed has no filter chips
+  expect(activeChips({ ...defaultFilters(PREFS), max_km: 50 }, true).map((c) => c.label)).toEqual(['Within 50 km']);
+  expect(activeChips({ ...defaultFilters(PREFS), max_km: 50 }, false)).toEqual([]); // no location: km chip means nothing
 });
 
 test('Clear removes every filter: all open hackathons, no chips', () => {

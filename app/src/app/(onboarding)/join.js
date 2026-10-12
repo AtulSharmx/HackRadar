@@ -4,7 +4,7 @@ import Chip from '../../components/Chip';
 import OnboardingStep, { Group } from '../../components/OnboardingStep';
 import Segmented from '../../components/Segmented';
 import { useDraft } from '../../lib/draft';
-import { DEGREES, yearOptions } from '../../lib/labels';
+import { DEGREES } from '../../lib/labels';
 
 const MODES = [['online', 'Online'], ['offline', 'Offline'], ['both', 'Both']];
 const MODE_LISTS = { online: ['online'], offline: ['offline', 'hybrid'], both: ['online', 'offline', 'hybrid'] };
@@ -13,21 +13,16 @@ const FEES = [['free', 'Free only'], ['any', 'Free and paid']];
 
 const same = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
-// Step 3: how you want to join. Defaults: Both, free and paid. Year appears once a degree is picked.
+// Step 3: how you want to join. Defaults: Both, free and paid. Degree hides listings closed to it (school-only,
+// postgraduate-only...); year is not asked: no source says which years may enter (launch audit, 10 Oct 2026).
 export default function Join() {
   const { draft, update } = useDraft();
   const radio = (selected, label, onPress) => (
     <Chip key={label} label={label} selected={selected} showRemove={false} role="radio" onPress={onPress} />
   );
 
-  const pickDegree = (key) => {
-    const degree = draft.degree === key ? null : key;
-    // a year that doesn't exist for the new degree (Year 4 after switching BTech -> MCA) is dropped
-    const stillValid = yearOptions(degree).some(([y]) => y === draft.year);
-    update({ degree, year: stillValid ? draft.year : null });
-  };
+  const pickDegree = (key) => update({ degree: draft.degree === key ? null : key });
 
-  const years = yearOptions(draft.degree);
   const next = () => router.push('/location');
   return (
     <OnboardingStep step={3} title="How do you want to join?" next={{ label: 'Next', onPress: next }} skip={next}>
@@ -47,14 +42,9 @@ export default function Join() {
           accessibilityLabel="Fee"
         />
       </Group>
-      <Group label="Degree">
+      <Group label="Degree" note="Hackathons not open to your degree (like school-only ones) stay hidden.">
         {DEGREES.map((d) => radio(draft.degree === d.key, d.label, () => pickDegree(d.key)))}
       </Group>
-      {years.length ? (
-        <Group label="Year">
-          {years.map(([y, label]) => radio(draft.year === y, label, () => update({ year: draft.year === y ? null : y })))}
-        </Group>
-      ) : null}
     </OnboardingStep>
   );
 }

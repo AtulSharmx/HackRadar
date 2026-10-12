@@ -64,6 +64,10 @@ export function matches(event, device, now = new Date()) {
     && (left == null || calendarDaysLeft(event.registration_deadline, now) > f.closing_within_days)) return false;
   if (f.solo_only && event.solo_allowed !== true) return false;
   if (f.exclude_warnings && event.trust_label === 'warning') return false;
+  // not open to my degree (collector normalize.degrees_from_unstop); on unless the filter turns it off
+  const degree = device.prefs?.degree;
+  const allowed = event.eligible_degrees;
+  if ((f.eligible_only ?? true) && degree && allowed != null && !allowed.includes(degree)) return false;
   return true;
 }
 

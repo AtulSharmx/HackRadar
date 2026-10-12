@@ -13,28 +13,20 @@ export const SORTS = [
 
 const ALL_MODES = ['online', 'offline', 'hybrid'];
 
-// Feed opens with my onboarding answers applied (App Flow: onboarding Finish)
+// The Feed opens with every open hackathon (launch audit, 10 Oct 2026: interests as a hard filter showed
+// "43 of 260"). My answers rank it instead: "Best match" scores interests, distance, fee and deadline
+// (match.score), and new-match alerts still use them as a filter (prefs.toDeviceRow). The one thing hidden
+// by default is what I asked to hide: events with warnings.
 export function defaultFilters(prefs) {
-  const located = prefs?.lat != null;
-  return {
-    themes: prefs?.themes || [],
-    // no location yet: online only until a city is set (App Flow, onboarding step 4), not saved as a choice
-    modes: located ? prefs?.modes || ALL_MODES : ['online'],
-    fee_max: prefs?.fee_max === 0 ? 0 : null, // onboarding asks Free only / Free and paid
-    paid_only: false,
-    // a distance means nothing without my location; applied anyway it would hide every offline event
-    max_km: located ? prefs?.max_km ?? null : null,
-    closing_within_days: null,
-    solo_only: false,
-    exclude_warnings: !!prefs?.hide_warnings,
-  };
+  return { ...clearedFilters(), exclude_warnings: !!prefs?.hide_warnings };
 }
 
-// "Clear" in the Filters sheet: no filter at all, every open hackathon
+// "Clear" in the Filters sheet: no filter at all, every open hackathon I can enter.
+// eligible_only drops only listings closed to my degree (school-only, postgraduate-only for a BTech...).
 export function clearedFilters() {
   return {
     themes: [], modes: ALL_MODES, fee_max: null, paid_only: false, max_km: null,
-    closing_within_days: null, solo_only: false, exclude_warnings: false,
+    closing_within_days: null, solo_only: false, exclude_warnings: false, eligible_only: true,
   };
 }
 
@@ -65,8 +57,12 @@ export function asDevice(prefs, filters) {
 }
 
 // One removable chip per active filter: [{ key, label, clear(filters) -> filters }]
-export function activeChips(f, hasLocation) {
+// degreeLabel: "BCA" etc. when my degree is known (the eligibility chip)
+export function activeChips(f, hasLocation, degreeLabel = null) {
   const chips = [];
+  if (f.eligible_only !== false && degreeLabel) {
+    chips.push({ key: 'eligible', label: `Open to ${degreeLabel}`, clear: (x) => ({ ...x, eligible_only: false }) });
+  }
   if (f.themes?.length) {
     const names = f.themes.map((t) => THEME_NAMES[t] || t);
     chips.push({ key: 'themes', label: names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', '), clear: (x) => ({ ...x, themes: [] }) });

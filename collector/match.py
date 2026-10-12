@@ -87,6 +87,10 @@ def matches(event: dict, device: dict, now: datetime | None = None) -> bool:
         return False
     if f.get("exclude_warnings") and event.get("trust_label") == "warning":
         return False
+    # not open to my degree (normalize.degrees_from_unstop); on unless the filter turns it off
+    degree, allowed = (device.get("prefs") or {}).get("degree"), event.get("eligible_degrees")
+    if f.get("eligible_only", True) and degree and allowed is not None and degree not in allowed:
+        return False
     return True
 
 

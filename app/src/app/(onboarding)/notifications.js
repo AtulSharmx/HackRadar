@@ -20,8 +20,8 @@ export default function NotificationsStep() {
   const { draft } = useDraft();
   const { save } = usePrefs();
 
-  // No city: the Feed shows online events until one is set (feedView.defaultFilters), and the mode picked
-  // in step 3 is kept for when it is
+  // The Feed shows every open event, ranked by these answers (feedView.defaultFilters); the mode picked
+  // in step 3 and the city also decide new-match alerts
   const finish = (notifications) => {
     save({ ...draft, notifications, match_alerts: notifications }); // "Allow" covers reminders and new-match alerts
     router.replace('/');

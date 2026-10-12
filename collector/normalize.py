@@ -155,3 +155,32 @@ def strip_html(text, limit: int | None = None) -> str | None:
     if limit and len(s) > limit:
         s = s[: limit - 1].rstrip() + "…"
     return s or None
+
+
+# ---------- eligibility (launch audit, 10 Oct 2026) ----------
+# Unstop tags each listing with who may enter ("Engineering Students", "Undergraduate", "School Students",
+# "All", ...). HackRadar's degree list is bca, bsc, btech, mca, mtech, other. Only exclusions that are
+# certain are made: a listing for school students or working professionals only, one limited to
+# management/law/medical, or the wrong level (postgraduate-only vs an undergraduate degree). "Engineering"
+# vs "Arts, Commerce, Sciences" is not used to split BCA/BSc from BTech: colleges label them differently.
+_UNSTOP_DISCIPLINES = {"Engineering Students", "Arts, Commerce, Sciences & Others", "Management", "Law", "Medical"}
+_UNSTOP_TECH = {"Engineering Students", "Arts, Commerce, Sciences & Others"}
+
+
+def degrees_from_unstop(names) -> list[str] | None:
+    """Degree keys a listing is open to; None = anyone (or unknown), [] = no college student."""
+    tags = {n.strip() for n in names or [] if n and n.strip()}
+    if not tags or "All" in tags:
+        return None
+    ug, pg = "Undergraduate" in tags, "Postgraduate" in tags
+    disciplines = tags & _UNSTOP_DISCIPLINES
+    if not (ug or pg or disciplines):   # school students, freshers or professionals only
+        return []
+    tech = not disciplines or bool(disciplines & _UNSTOP_TECH)
+    ug_ok, pg_ok = ug or not (ug or pg), pg or not (ug or pg)
+    out = []
+    if tech and ug_ok:
+        out += ["bca", "bsc", "btech"]
+    if tech and pg_ok:
+        out += ["mca", "mtech"]
+    return out + ["other"]   # any other college degree: never excluded, its field is unknown
