@@ -158,3 +158,19 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
 - 8 Oct 2026, phone OTP dropped (owner's call): a Supabase Send SMS hook + Fast2SMS version was written
   (commit 5588a23) and removed the same day as too much setup (recharge, KYC, DLT, dashboard hooks).
   Sign-in is Google, GitHub and email codes; the code screen still counts down Supabase's wait between codes.
+- 12 Oct 2026, launch fixes (from the 10 Oct launch audit):
+  - Feed shows every open event, ranked by interests; the only default filter is "Open to <degree>",
+    shown as a removable chip (Unstop eligibility tags -> `eligible_degrees`; 5 of 258 open events are
+    school/professional only). The year question is gone (nothing used it).
+  - Stale rule: an event no source has listed for 3 days leaves the Feed (0015).
+  - Privacy policy at https://hackradar.expo.app; Profile -> Delete my account (`delete_my_account` RPC).
+  - Report wrong info (reports table) and Submit a hackathon (submissions: signed-in only, 5 a day,
+    pending -> approved in the Supabase table editor -> published as source "community" by the collector).
+    New ones reach the admin on Telegram once, packed into whole messages. Column-level insert grants
+    stop backdating/self-approval (0016-0017).
+  - Battery tip once after onboarding (Android, alerts on) and from Profile.
+  - HackerEarth added (public upcoming JSON, hackathons only; 2 live). Devnovate not built: its terms
+    forbid copying. Theme rules catch PromptWars/agentic (AI) and coding battles; "other" 42 -> 38.
+  - OTA to preview (runtime 64776585). After it, app.json blocks SYSTEM_ALERT_WINDOW and storage
+    permissions, so the next APK/AAB has a new runtime. Play steps and Data safety answers: docs/play-console.md.
+  - Repo moved to github.com/AtulSharmx/HackRadar; its Actions secrets must be added there.
