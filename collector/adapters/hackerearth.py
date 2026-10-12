@@ -37,6 +37,7 @@ def parse(raw: dict) -> Event:
         start_date=parse_date(raw.get("start_utc_tz")),
         end_date=end,
         themes=classify_themes(title, [], raw.get("description")),
+        source_verified=raw.get("is_hackerearth") is True,   # run by HackerEarth itself, like Devfolio's listings
     )
 
 
