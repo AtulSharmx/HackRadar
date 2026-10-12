@@ -54,7 +54,7 @@ def test_admin_hears_about_new_submissions_and_reports_once(monkeypatch):
     db = FakeDb([{**SUB, "status": "pending"}], [{"id": 7, "reason": "fake", "note": "asks Rs 999", "event_id": "e1"}],
                 events=[{"id": "e1", "title": "Shady Hack"}])
     assert community.admin_queue(db) == 2
-    assert "1 hackathon submission to review" in sent[0] and "HackSGT 2026" in sent[0]
+    assert "1 submission(s) to review, 1 report(s)" in sent[0] and "HackSGT 2026" in sent[0]
     assert "Shady Hack" in sent[0] and "fake / scam: asks Rs 999" in sent[0]
     assert db.patched == [("/submissions", 'in.("s1")'), ("/reports", "in.(7)")]
     assert community.admin_queue(FakeDb([], [])) == 0
@@ -71,3 +71,23 @@ def test_a_quote_in_a_link_cannot_break_out_of_href(monkeypatch):
     monkeypatch.setattr(community, "send", lambda text: sent.append(text) or True)
     community.admin_queue(FakeDb([{**SUB, "status": "pending", "registration_url": 'https://a.io/x"><b>y'}], []))
     assert 'href="https://a.io/x&quot;&gt;&lt;b&gt;y"' in sent[0]
+
+
+def test_many_items_are_split_into_whole_messages_never_cut(monkeypatch):
+    sent = []
+    monkeypatch.setattr(community, "send", lambda text: sent.append(text) or True)
+    subs = [{**SUB, "id": f"s{i}", "status": "pending", "title": f"Hack {i} " + "x" * 150} for i in range(40)]
+    db = FakeDb(subs, [])
+    assert community.admin_queue(db) == 40
+    assert len(sent) > 1 and all(len(m) <= community.LIMIT for m in sent)
+    assert all(m.count("<a ") == m.count("</a>") for m in sent)          # no tag cut in half
+    assert sum(len(ids.split(",")) for _, ids in db.patched) == 40          # every item marked once
+
+
+def test_a_failed_message_leaves_the_rest_for_next_run(monkeypatch):
+    calls = []
+    monkeypatch.setattr(community, "send", lambda text: calls.append(text) or len(calls) == 1)
+    subs = [{**SUB, "id": f"s{i}", "status": "pending", "title": f"Hack {i} " + "x" * 150} for i in range(40)]
+    db = FakeDb(subs, [])
+    done = community.admin_queue(db)
+    assert 0 < done < 40 and len(calls) == 2                               # first sent, second failed, stopped
