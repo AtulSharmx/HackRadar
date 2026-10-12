@@ -160,3 +160,19 @@ def test_hack2skill_fixture():
     # in person with no city in the title: location unknown (could be abroad), so left out
     assert not hack2skill.is_relevant(events["Build with AI: PromptWars"].__class__(
         **{**events["Build with AI: PromptWars"].__dict__, "registration_deadline": None}))
+
+
+def test_hackerearth_keeps_only_hackathons():
+    from dataclasses import replace
+
+    from collector.adapters import hackerearth
+    events = [hackerearth.parse(r) for r in load("hackerearth_upcoming.json")["response"]]
+    assert len(events) == 3
+    e = events[0]
+    assert (e.title, e.source_event_id, e.mode) == ("Agentic Banking Hackathon", "agentic-banking-hackathon-2", "online")
+    assert e.registration_deadline == e.end_date == datetime(2026, 11, 13, 18, 29, tzinfo=timezone.utc)
+    assert e.start_date == datetime(2026, 10, 5, 14, 30, tzinfo=timezone.utc)
+    assert e.organizer is None and e.fee_amount is None and e.prize_amount_inr is None   # not in the list, never guessed
+    later = datetime(2099, 1, 1, tzinfo=timezone.utc)   # the fixture's dates pass; the hackathon check must not
+    kept = {x.title for x in events if hackerearth.is_relevant(replace(x, registration_deadline=later))}
+    assert kept == {"Agentic Banking Hackathon", "GoDaddy Inclusive Innovation Hackathon 2026"}   # hiring challenge dropped

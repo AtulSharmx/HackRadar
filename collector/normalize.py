@@ -95,7 +95,7 @@ def looks_indian(text) -> bool:
 # ---------- themes ----------
 
 _THEME_WORDS = {
-    "ai_ml": r"ai|artificial intelligence|machine learning|ml|genai|gen ai|llms?|deep learning|computer vision|nlp",
+    "ai_ml": r"ai|artificial intelligence|machine learning|ml|genai|gen ai|llms?|deep learning|computer vision|nlp|agentic|prompt\w*",
     "cybersecurity": r"cyber\s?security|cyber|security|ctf|infosec",
     "web": r"web|web dev|full ?stack|frontend|backend",
     "mobile": r"mobile|android|ios|app development|flutter",
@@ -115,7 +115,8 @@ def map_themes(*texts) -> list[str]:
 
 # Themes v2 (Plan A3), tuned on 212 open Unstop events on 30 Sep 2026 where 41% were "other".
 _CONTEST = re.compile(r"\b(coding contest|programming (contest|league)|competitive programming|code ?clash|cp contest|coding league|"
-                      r"battle of codes|code yudh|dsa|codesprint|coderumble|code ?rush|algo\w*)\b", re.I)
+                      r"battle of codes|code yudh|dsa|codesprint|coderumble|code ?rush|algo\w*|"
+                      r"coding battle|code auction|code ?breaker|flash ?code|machine coding|debugging contest)\b", re.I)
 _CONTEST_SKILLS = re.compile(r"\b(data structures|algorithms|competitive programming)\b", re.I)
 # description text is noisy ("AI-powered future" everywhere), so only unambiguous phrases count there
 _DESC_WORDS = {
