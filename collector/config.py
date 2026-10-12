@@ -24,4 +24,4 @@ PLATFORM_HOSTS = ("devpost.com", "unstop.com", "devfolio.co", "forms.gle", "docs
                   "forms.office.com", "lu.ma", "luma.com", "typeform.com", "tally.so")
 SOCIAL_HOSTS = ("instagram.com", "wa.me", "chat.whatsapp.com", "whatsapp.com", "t.me", "linktr.ee",
                 "bit.ly", "tinyurl.com", "rb.gy", "shorturl.at", "cutt.ly")
-TRUSTED_SOURCES = ("devpost", "unstop", "devfolio", "hack2skill")
+TRUSTED_SOURCES = ("devpost", "unstop", "devfolio", "hack2skill", "hackerearth", "community")  # community: admin-reviewed

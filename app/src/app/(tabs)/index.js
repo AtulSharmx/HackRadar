@@ -348,6 +348,7 @@ export default function FeedScreen() {
             <Text style={[type.meta, styles.footer, { color: colors.textSecondary }]}>
               {shown.length} of {events.length} open hackathons · Updated {ago(fetchedAt)}
             </Text>
+            <Button label="Know one that's missing? Submit it" variant="text" onPress={() => router.push('/submit')} style={styles.submitLink} />
           </>
         ) : null}
       </ScrollView>
@@ -423,4 +424,5 @@ const styles = StyleSheet.create({
   pageBtnOff: { opacity: 0.35 },
   pageText: { flex: 1, textAlign: 'center', fontVariant: ['tabular-nums'] },
   footer: { textAlign: 'center', marginTop: space.lg },
+  submitLink: { alignSelf: 'center' },
 });

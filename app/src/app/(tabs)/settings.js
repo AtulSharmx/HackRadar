@@ -1,5 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -10,7 +11,7 @@ import CitySearch from '../../components/CitySearch';
 import Segmented from '../../components/Segmented';
 import SwitchRow from '../../components/SwitchRow';
 import { useToast } from '../../components/Toast';
-import { explain, logOut } from '../../lib/account';
+import { deleteAccount, explain, logOut, PRIVACY_URL } from '../../lib/account';
 import { versionLine } from '../../lib/appUpdates';
 import { select, success } from '../../lib/haptics';
 import { DEGREES, THEMES } from '../../lib/labels';
@@ -69,6 +70,27 @@ function AlertsNote({ colors, onAllow, onRetry }) {
   );
 }
 
+// One row in MORE: icon, label, chevron (none for the destructive one, which is red and last)
+function LinkRow({ icon, label, onPress, danger = false, last = false, colors }) {
+  const tint = danger ? colors.urgent : colors.brand;
+  return (
+    <Pressable
+      onPress={() => {
+        select();
+        onPress();
+      }}
+      android_ripple={{ color: colors.border }}
+      style={[styles.linkRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <MaterialCommunityIcons name={icon} size={22} color={tint} />
+      <Text style={[type.body, styles.linkText, { color: danger ? colors.urgent : colors.textPrimary }]}>{label}</Text>
+      {danger ? null : <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />}
+    </Pressable>
+  );
+}
+
 function AccountCard({ colors, onLogOut, leaving }) {
   const { user, error, retry, isGuest, email, phone, name, avatar } = useSession();
   const handle = email || phone; // how they sign in
@@ -113,13 +135,14 @@ function AccountCard({ colors, onLogOut, leaving }) {
 // App Flow "Settings flows": one scrolling list; every change saves at once (phone first, then the devices row).
 export default function SettingsScreen() {
   const { colors } = useAppTheme();
-  const { prefs, save, update: patchPrefs } = usePrefs();
+  const { prefs, save, update: patchPrefs, clear: clearPrefs } = usePrefs();
   const { user } = useSession();
   const saved = useSaved();
   const toast = useToast();
   const [cityOpen, setCityOpen] = useState(false);
   const [lastThemeNote, setLastThemeNote] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!prefs) return null; // onboarding not finished: this tab isn't reachable then
   const update = (patch) => save({ ...prefs, ...patch });
@@ -135,6 +158,32 @@ export default function SettingsScreen() {
 
   const setNotifications = (on) => (on ? turnOnNotifications(patchPrefs, toast) : update({ notifications: false }));
   const setMatchAlerts = (on) => (on ? turnOnNotifications(patchPrefs, toast, 'match_alerts') : update({ match_alerts: false }));
+
+  // Play Store requirement: delete the account and everything tied to it, from the app itself
+  const confirmDelete = () => Alert.alert(
+    'Delete your account?',
+    'This deletes your account, preferences, saved hackathons and alerts, and cancels reminders on this phone. It cannot be undone.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          setDeleting(true);
+          try {
+            await deleteAccount();
+            saved.clearLocal();
+            clearPrefs(); // back to onboarding; reminders are cancelled as Saved and alerts empty out
+            success();
+            toast('Your account and data are deleted.');
+          } catch (e) {
+            setDeleting(false);
+            toast(explain(e));
+          }
+        },
+      },
+    ],
+  );
 
   const confirmLogOut = () => Alert.alert(
     'Log out?',
@@ -246,20 +295,15 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title="MORE" colors={colors}>
-          <Pressable
-            onPress={() => {
-              select();
-              router.push('/about');
-            }}
-            android_ripple={{ color: colors.border }}
-            style={styles.linkRow}
-            accessibilityRole="button"
-            accessibilityLabel="About HackRadar"
-          >
-            <MaterialCommunityIcons name="information-outline" size={22} color={colors.brand} />
-            <Text style={[type.body, styles.linkText, { color: colors.textPrimary }]}>About HackRadar</Text>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textSecondary} />
-          </Pressable>
+          <LinkRow icon="plus-circle-outline" label="Submit a hackathon" onPress={() => router.push('/submit')} colors={colors} />
+          <LinkRow icon="information-outline" label="About HackRadar" onPress={() => router.push('/about')} colors={colors} />
+          <LinkRow
+            icon="shield-lock-outline"
+            label="Privacy policy"
+            onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL, { toolbarColor: colors.surface, controlsColor: colors.brand }).catch(() => {})}
+            colors={colors}
+          />
+          <LinkRow icon="delete-outline" label={deleting ? 'Deleting…' : 'Delete my account'} onPress={confirmDelete} danger last colors={colors} />
         </Section>
         {/* which version this phone runs: shows when an update has arrived */}
         <Text style={[type.meta, styles.version, { color: colors.textSecondary }]}>{versionLine()}</Text>

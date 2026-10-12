@@ -9,6 +9,7 @@ import Button from '../../components/Button';
 import IconButton from '../../components/IconButton';
 import PressableScale from '../../components/PressableScale';
 import RegisterPrompt from '../../components/RegisterPrompt';
+import ReportSheet from '../../components/ReportSheet';
 import Sheet from '../../components/Sheet';
 import { useToast, useToastLift } from '../../components/Toast';
 import TrustLabel from '../../components/TrustLabel';
@@ -95,6 +96,7 @@ export default function EventDetail() {
   const askLater = useRef(null); // "Did you register?" waits for the return from the browser or app
   useEffect(() => () => askLater.current?.remove(), []);
   const [needsApp, setNeedsApp] = useState(null); // the platform app, when it isn't on this phone
+  const [reporting, setReporting] = useState(false);
   const [prompt, setPrompt] = useState(null); // { where, minutes } while "Did you register?" is up
 
   if (!event) {
@@ -304,10 +306,9 @@ export default function EventDetail() {
           />
           <Row label="Venue" value={venue} colors={colors} />
           <Row label="Team" value={team || (event.solo_allowed ? 'Solo allowed' : null)} colors={colors} />
-          <Row label="Who can join" value={event.eligibility_text === 'All' ? 'Anyone' : event.eligibility_text} colors={colors} />
           <Row label="Fee" value={feeLong(event.fee_amount, event.is_paid)} colors={colors} />
           <Row label="Prizes" value={prizeLong(event)} colors={colors} />
-          <Row label="Eligibility" value={event.eligibility_text} colors={colors} />
+          <Row label="Who can join" value={event.eligibility_text === 'All' ? 'Anyone' : event.eligibility_text} colors={colors} />
         </View>
 
         {themes.length ? (
@@ -323,6 +324,16 @@ export default function EventDetail() {
         <Text style={[type.meta, styles.source, { color: colors.textSecondary }]}>
           Listed on {listedOn}{checked ? ` · Checked ${ago(checked)}` : ''}
         </Text>
+        <Pressable
+          onPress={() => setReporting(true)}
+          android_ripple={{ color: colors.border }}
+          style={styles.report}
+          accessibilityRole="button"
+          accessibilityLabel="Report wrong info"
+        >
+          <MaterialCommunityIcons name="flag-outline" size={18} color={colors.textSecondary} />
+          <Text style={[type.label, { color: colors.textSecondary }]}>Report wrong info</Text>
+        </Pressable>
       </ScrollView>
 
       {/* sticky bottom bar: the one main action on this screen */}
@@ -359,6 +370,15 @@ export default function EventDetail() {
         minutes={prompt?.minutes ?? 0}
         onRegistered={markRegistered}
         onClose={() => setPrompt(null)}
+      />
+      <ReportSheet
+        visible={reporting}
+        onClose={() => setReporting(false)}
+        eventId={event.id}
+        onSent={(message) => {
+          setReporting(false);
+          toast(message);
+        }}
       />
       <Sheet visible={!!needsApp} onClose={() => setNeedsApp(null)} title={`Register with the ${app?.name || ''} app`}>
         <Text style={[type.body, { color: colors.textPrimary }]}>
@@ -411,6 +431,7 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   tag: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: space.xs },
   source: { marginTop: space.sm },
+  report: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', minHeight: layout.minTouch, marginTop: space.xs },
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
     paddingTop: space.sm, paddingHorizontal: layout.screenPadding, borderTopWidth: StyleSheet.hairlineWidth,

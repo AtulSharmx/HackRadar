@@ -5,6 +5,7 @@ Signs in two throwaway anonymous users, tries every forbidden action, then delet
 """
 import os
 import sys
+import uuid
 
 import httpx
 
@@ -20,6 +21,22 @@ def sign_in() -> tuple[str, str]:
     r.raise_for_status()
     j = r.json()
     return j["access_token"], j["user"]["id"]
+
+
+REAL = []   # throwaway non-guest users made by sign_in_real, deleted at the end
+
+
+def sign_in_real() -> tuple[str, str]:
+    """A confirmed email+password user made with the service key (guests can't submit hackathons)."""
+    email, pw = f"rls-check-{uuid.uuid4().hex[:12]}@example.com", uuid.uuid4().hex
+    admin = {"apikey": SERVICE, "Authorization": f"Bearer {SERVICE}"}
+    r = httpx.post(f"{URL}/auth/v1/admin/users", headers=admin, json={"email": email, "password": pw, "email_confirm": True})
+    r.raise_for_status()
+    REAL.append(r.json()["id"])
+    t = httpx.post(f"{URL}/auth/v1/token", params={"grant_type": "password"}, headers={"apikey": ANON},
+                   json={"email": email, "password": pw})
+    t.raise_for_status()
+    return t.json()["access_token"], REAL[-1]
 
 
 def rest(token: str | None):
@@ -70,8 +87,38 @@ def main() -> int:
         check("register a malformed token", a.post("/rpc/register_push_token", json={"p_token": "not a token"}).status_code >= 400)
         check("register a token without signing in (plain anon)",
               plain.post("/rpc/register_push_token", json={"p_token": token}).status_code >= 400)
+
+        # reports (0016): insert own, never as someone else, never read others'
+        check("report wrong info on an event (sanity)",
+              a.post("/reports", json={"event_id": eid, "reason": "wrong_dates", "note": "rls check"}).status_code == 201)
+        check("report as someone else", blocked(b.post("/reports", json={"event_id": eid, "reason": "fake", "user_id": id_a})))
+        check("read another person's reports", blocked(b.get("/reports", params={"select": "id"})))
+        check("same report twice", a.post("/reports", json={"event_id": eid, "reason": "wrong_dates"}).status_code >= 400)
+
+        # submissions (0016): guests can't submit; a real account can, 5 a day, only as pending
+        sub = {"title": "RLS check hack", "registration_url": "https://example.org/rls", "organizer": "RLS check",
+               "mode": "online", "registration_deadline": "2099-01-01T00:00:00Z"}
+        check("guest submits a hackathon", blocked(a.post("/submissions", json=sub)))
+        tok_c, id_c = sign_in_real()
+        c = rest(tok_c)
+        check("signed-in account submits (sanity)", c.post("/submissions", json=sub).status_code == 201)
+        check("submit as already approved", blocked(c.post("/submissions", json={**sub, "status": "approved"})))
+        for _ in range(4):
+            c.post("/submissions", json=sub)
+        check("6th submission in a day", blocked(c.post("/submissions", json=sub)))
+        check("read another person's submissions", blocked(a.get("/submissions", params={"select": "id"})))
+
+        # delete my account (0016): the user and every row hanging off it go
+        check("delete my account (sanity)", b.post("/rpc/delete_my_account", json={}).status_code in (200, 204))
+        gone = httpx.get(f"{URL}/rest/v1/devices", params={"id": f"eq.{id_b}"},
+                         headers={"apikey": SERVICE, "Authorization": f"Bearer {SERVICE}"}).json()
+        check("deleted account leaves no device row", gone == [])
+        check("delete without signing in", plain.post("/rpc/delete_my_account", json={}).status_code >= 400)
     finally:
-        for uid in (id_a, id_b):   # device rows cascade from auth.users
+        svc = {"apikey": SERVICE, "Authorization": f"Bearer {SERVICE}"}   # rows that outlive their user
+        httpx.delete(f"{URL}/rest/v1/reports", params={"note": "eq.rls check"}, headers=svc)
+        httpx.delete(f"{URL}/rest/v1/submissions", params={"title": "eq.RLS check hack"}, headers=svc)
+        for uid in (id_a, id_b, *REAL):   # device rows cascade from auth.users (b may already be gone)
             httpx.delete(f"{URL}/auth/v1/admin/users/{uid}",
                          headers={"apikey": SERVICE, "Authorization": f"Bearer {SERVICE}"})
 

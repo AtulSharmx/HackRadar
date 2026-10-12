@@ -47,6 +47,16 @@ function Routes() {
             headerTintColor: colors.textPrimary,
           }}
         />
+        <Stack.Screen
+          name="submit"
+          options={{
+            title: 'Submit a hackathon',
+            animation: 'slide_from_right',
+            headerStyle: { backgroundColor: colors.background },
+            headerShadowVisible: false,
+            headerTintColor: colors.textPrimary,
+          }}
+        />
       </Stack.Protected>
       {/* reachable before and after onboarding: Welcome's "I already have an account" and Settings */}
       <Stack.Screen name="account" options={{ headerShown: false, animation: 'slide_from_bottom' }} />
