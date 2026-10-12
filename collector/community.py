@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from .models import Event
 from .normalize import classify_themes, clean_city, parse_money
-from .telegram import esc, send
+from .telegram import esc, esc_attr, send
 
 name = "community"
 EDITOR = "https://supabase.com/dashboard/project/vbsgcjfrlmouzaocyfts/editor"
@@ -75,14 +75,15 @@ def admin_queue(db) -> int:
         for s in subs:
             where = "Online" if s["mode"] == "online" else s.get("city") or s["mode"]
             lines.append(f'• {esc(s["title"])} ({esc(s["organizer"])}, {esc(where)}, closes {s["registration_deadline"][:10]})\n'
-                         f'  <a href="{esc(s["registration_url"])}">link</a>')
+                         f'  <a href="{esc_attr(s["registration_url"])}">link</a>')
         lines.append(f'Approve: set status to approved in <a href="{EDITOR}">submissions</a>.')
     if reps:
         lines.append(f"<b>{len(reps)} report{'s' if len(reps) > 1 else ''} of wrong info</b>")
         for r in reps:
             note = f": {esc(r['note'])}" if r.get("note") else ""
             lines.append(f"• {esc(titles.get(r['event_id'], 'removed event'))} — {REASONS.get(r['reason'], r['reason'])}{note}")
-    send("\n".join(lines)[:3900])
+    if not send("\n".join(lines)[:3900]):
+        return 0   # not delivered: leave them unmarked so the next run tries again (review is never skipped)
     for table, rows in (("submissions", subs), ("reports", reps)):
         if rows:
             ids = ",".join(f'"{r["id"]}"' if table == "submissions" else str(r["id"]) for r in rows)

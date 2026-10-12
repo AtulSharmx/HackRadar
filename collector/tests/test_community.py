@@ -58,3 +58,16 @@ def test_admin_hears_about_new_submissions_and_reports_once(monkeypatch):
     assert "Shady Hack" in sent[0] and "fake / scam: asks Rs 999" in sent[0]
     assert db.patched == [("/submissions", 'in.("s1")'), ("/reports", "in.(7)")]
     assert community.admin_queue(FakeDb([], [])) == 0
+
+
+def test_nothing_is_marked_when_telegram_did_not_take_it(monkeypatch):
+    monkeypatch.setattr(community, "send", lambda text: False)
+    db = FakeDb([{**SUB, "status": "pending"}], [])
+    assert community.admin_queue(db) == 0 and db.patched == []   # tried again next run, review never skipped
+
+
+def test_a_quote_in_a_link_cannot_break_out_of_href(monkeypatch):
+    sent = []
+    monkeypatch.setattr(community, "send", lambda text: sent.append(text) or True)
+    community.admin_queue(FakeDb([{**SUB, "status": "pending", "registration_url": 'https://a.io/x"><b>y'}], []))
+    assert 'href="https://a.io/x&quot;&gt;&lt;b&gt;y"' in sent[0]

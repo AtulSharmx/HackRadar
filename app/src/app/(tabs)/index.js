@@ -1,10 +1,11 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { startTransition, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Banner from '../../components/Banner';
+import BatteryTip from '../../components/BatteryTip';
 import Button from '../../components/Button';
 import Chip from '../../components/Chip';
 import CitySearch from '../../components/CitySearch';
@@ -16,6 +17,7 @@ import SkeletonCard from '../../components/SkeletonCard';
 import SortSheet from '../../components/SortSheet';
 import { useToast } from '../../components/Toast';
 import { activeChips, applyView, clearedFilters, defaultFilters, pageOf, SORTS } from '../../lib/feedView';
+import { batteryTipSeen } from '../../lib/battery';
 import { ago } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
 import { DEGREES } from '../../lib/labels';
@@ -90,7 +92,7 @@ export default function FeedScreen() {
   const [sort, setSort] = useState('best');
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [sheet, setSheet] = useState(null); // 'filters' | 'sort' | 'city' | null
+  const [sheet, setSheet] = useState(null); // 'filters' | 'sort' | 'city' | 'battery' | null
   useEffect(() => setFilters(defaults), [defaults]); // prefs changed in Settings -> new defaults
 
   // A tapped "3 new hackathons match" push opens the Feed with ?from=<ids>: only those show until the
@@ -109,6 +111,14 @@ export default function FeedScreen() {
   const degree = DEGREES.find((d) => d.key === prefs?.degree);
   const chips = activeChips(filters, !!me, degree ? (degree.key === 'other' ? 'college students' : degree.label) : null);
   const openCity = () => setSheet('city'); // one sheet at a time: this also closes Filters or Sort
+
+  // once after onboarding, if alerts or reminders are on: the battery tip (lib/battery.js)
+  const alertsOn = !!(prefs?.notifications || prefs?.match_alerts);
+  useEffect(() => {
+    if (Platform.OS !== 'android' || !alertsOn || batteryTipSeen()) return undefined;
+    const t = setTimeout(() => setSheet((cur) => cur || 'battery'), 1500);
+    return () => clearTimeout(t);
+  }, [alertsOn]);
 
   const listRef = useRef(null);
   const toTop = (animated) => listRef.current?.scrollTo({ y: 0, animated });
@@ -379,6 +389,7 @@ export default function FeedScreen() {
           startTransition(() => setSort(s));
         }}
       />
+      <BatteryTip visible={sheet === 'battery'} onClose={() => setSheet(null)} />
       <CitySearch
         visible={sheet === 'city'}
         onClose={() => setSheet(null)}

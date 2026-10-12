@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from . import match, push
 from .normalize import IST
-from .telegram import esc, send
+from .telegram import esc, esc_attr, send
 
 CHANGE_PUSH_FIELDS = {"registration_deadline", "venue_address", "city"}   # TRD: other changes don't alert
 LIMIT = 3900   # Telegram max is 4096 chars per message
@@ -54,7 +54,7 @@ def event_block(e: dict, dev: dict, now: datetime) -> str:
     why = match.reasons(e, dev, parts, now)
     if why:
         lines.append("<i>" + esc(" · ".join(why)) + "</i>")
-    lines.append(f'<a href="{esc(e["registration_url"])}">Open and register</a>')
+    lines.append(f'<a href="{esc_attr(e["registration_url"])}">Open and register</a>')
     return "\n".join(lines)
 
 
@@ -257,7 +257,7 @@ def saved_changes(db, now: datetime | None = None) -> int:
                     else:
                         label = "Venue" if f == "venue_address" else "City"
                         lines.append(esc(f"{label}: {old or 'not listed'} → {new or 'not listed'}"))
-                lines.append(f'<a href="{esc(e["registration_url"])}">Check the event page</a>')
+                lines.append(f'<a href="{esc_attr(e["registration_url"])}">Check the event page</a>')
                 blocks.append("\n".join(lines))
             if blocks:
                 _send_chunked("📅 <b>A saved hackathon changed</b>", blocks)
