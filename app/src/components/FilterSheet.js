@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { applyView, clearedFilters, FEE_CHOICES, feeChoice } from '../lib/feedView';
-import { THEMES } from '../lib/labels';
+import { DEGREES, THEMES } from '../lib/labels';
 import { space, type, useAppTheme } from '../theme';
 import Button from './Button';
 import Chip from './Chip';
@@ -35,6 +35,8 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
   const fee = feeChoice(f);
   const toggleTheme = (k) => set({ themes: f.themes.includes(k) ? f.themes.filter((t) => t !== k) : [...f.themes, k] });
   const modeKey = Object.keys(MODE_LISTS).find((k) => same(f.modes, MODE_LISTS[k])) || null;
+  const degree = DEGREES.find((d) => d.key === prefs?.degree);
+  const degreeLabel = degree ? (degree.key === 'other' ? 'college students' : degree.label) : null;
 
   return (
     <Sheet
@@ -79,6 +81,9 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
       </Group>
       <View>
         <SwitchRow label="Closing within 7 days" value={f.closing_within_days === 7} onChange={(v) => set({ closing_within_days: v ? 7 : null })} />
+        {degreeLabel ? (
+          <SwitchRow label={`Open to ${degreeLabel}`} value={f.eligible_only === true} onChange={(v) => set({ eligible_only: v })} />
+        ) : null}
         <SwitchRow label="Solo allowed" value={!!f.solo_only} onChange={(v) => set({ solo_only: v })} />
         <SwitchRow label="Hide warnings" value={!!f.exclude_warnings} onChange={(v) => set({ exclude_warnings: v })} />
       </View>

@@ -17,16 +17,18 @@ const ALL_MODES = ['online', 'offline', 'hybrid'];
 // "43 of 260"). My answers rank it instead: "Best match" scores interests, distance, fee and deadline
 // (match.score), and new-match alerts still use them as a filter (prefs.toDeviceRow). The one thing hidden
 // by default is what I asked to hide: events with warnings.
+// Degree eligibility is opt-in too (user, 20 Oct 2026): no "Open to BCA" filter on the first open; the
+// Filters sheet can still turn it on.
 export function defaultFilters(prefs) {
   return { ...clearedFilters(), exclude_warnings: !!prefs?.hide_warnings };
 }
 
-// "Clear" in the Filters sheet: no filter at all, every open hackathon I can enter.
+// "Clear" in the Filters sheet: no filter at all, every open hackathon.
 // eligible_only drops only listings closed to my degree (school-only, postgraduate-only for a BTech...).
 export function clearedFilters() {
   return {
     themes: [], modes: ALL_MODES, fee_max: null, paid_only: false, max_km: null,
-    closing_within_days: null, solo_only: false, exclude_warnings: false, eligible_only: true,
+    closing_within_days: null, solo_only: false, exclude_warnings: false, eligible_only: false,
   };
 }
 

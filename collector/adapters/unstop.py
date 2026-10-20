@@ -29,6 +29,25 @@ def _prize(prizes) -> tuple[int | None, str | None]:
     return None, strip_html(other, 200)
 
 
+# Unstop's prize rows carry certificate as a real 1/0 flag; goodies only appear in the "others" text.
+GOODIE_WORDS = ("goodie", "goody", "merch", "swag", "t-shirt", "tshirt", "t shirt", "sticker", "hoodie", "backpack", "bottle")
+
+
+def _perks(prizes) -> list[str]:
+    """Real yes/no only: certificate comes from its flag, goodies from the source's own wording.
+    No prize rows at all = unknown, so both rows stay hidden in the app."""
+    if not prizes:
+        return []
+    text = " ".join(str(p.get("others") or "") for p in prizes).lower()
+    out = []
+    if any(p.get("certificate") for p in prizes) or "certificate" in text:
+        out.append("certificate")
+    elif all(p.get("certificate") == 0 for p in prizes):
+        out.append("no_certificate")   # every prize row explicitly says 0
+    out.append("goodies" if any(w in text for w in GOODIE_WORDS) else "no_goodies")
+    return out
+
+
 def _fee(raw) -> int | None:
     if raw.get("isPaid") is False:
         return 0
@@ -74,6 +93,7 @@ def parse(raw: dict) -> Event:
         is_paid=raw["isPaid"] if isinstance(raw.get("isPaid"), bool) else None,
         prize_text=prize_text,
         prize_amount_inr=prize,
+        perks=_perks(raw.get("prizes")),
         eligibility_text=strip_html(", ".join(_eligible(raw)), 300),
         eligible_degrees=degrees_from_unstop(_eligible(raw)),
         posted_at=parse_date(raw.get("approved_date")),   # when Unstop published it; their own list is newest-first by it

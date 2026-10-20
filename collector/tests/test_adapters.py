@@ -48,6 +48,11 @@ def test_unstop_fixture():
     assert e.registration_deadline == datetime(2026, 10, 4, 14, 29, tzinfo=timezone.utc)
     assert e.team_min == 1 and e.solo_allowed and e.fee_amount == 0
     assert e.registration_url.startswith("https://unstop.com/")
+    # real rewards from the prize rows: certificate is a 1/0 flag, goodies come from "Unstop Merchandise"
+    assert e.perks == ["certificate", "goodies"]
+    assert next(x for x in events if x.title == "Growth Hack Challenge").perks == ["certificate", "no_goodies"]
+    assert next(x for x in events if x.title == "Hackathon - Flagship").perks == ["no_certificate", "no_goodies"]
+    assert next(x for x in events if x.title == "The Liar's Chatroom").perks == []
     paid = next(x for x in events if x.title == "National Young Programmers Olympiad")
     assert paid.fee_amount == 499 and paid.prize_amount_inr == 1_000_000
     assert e.to_row()["is_paid"] is False and paid.to_row()["is_paid"] is True

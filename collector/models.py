@@ -35,6 +35,7 @@ class Event:
     prize_text: str | None = None
     prize_amount_inr: int | None = None
     prize_approximate: bool = False
+    perks: list[str] = field(default_factory=list)   # source-backed yes/no rewards: certificate, goodies
     eligibility_text: str | None = None
     eligible_degrees: list[str] | None = None   # degree keys allowed; None = anyone/unknown
     source_verified: bool = False          # the platform itself verified this listing (Devfolio "verified")
