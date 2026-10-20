@@ -33,18 +33,27 @@ def _prize(prizes) -> tuple[int | None, str | None]:
 GOODIE_WORDS = ("goodie", "goody", "merch", "swag", "t-shirt", "tshirt", "t shirt", "sticker", "hoodie", "backpack", "bottle")
 
 
-def _perks(prizes) -> list[str]:
-    """Real yes/no only: certificate comes from its flag, goodies from the source's own wording.
-    No prize rows at all = unknown, so both rows stay hidden in the app."""
-    if not prizes:
-        return []
-    text = " ".join(str(p.get("others") or "") for p in prizes).lower()
+def _detail_perks(comp: dict) -> list[str]:
+    """Event-level rewards from Unstop's detail API.
+    participation_certificate is the real 1/0 for participation certificates (not the winner-prize
+    certificate flag). Goodies have no negative flag, so only positive mentions are recorded; the app
+    says "Not listed" when the source never mentions them."""
+    prizes = comp.get("prizes") or []
+    text = " ".join(str(x or "") for x in [
+        comp.get("overall_prizes"), comp.get("details"),
+        *(p.get("others") for p in prizes),
+    ]).lower()
     out = []
-    if any(p.get("certificate") for p in prizes) or "certificate" in text:
+    participation = comp.get("participation_certificate")
+    if participation == 1:
         out.append("certificate")
-    elif all(p.get("certificate") == 0 for p in prizes):
-        out.append("no_certificate")   # every prize row explicitly says 0
-    out.append("goodies" if any(w in text for w in GOODIE_WORDS) else "no_goodies")
+    elif participation == 0:
+        # winner-prize certificates must not turn a real "no participation certificate" into Yes
+        out.append("certificate" if "participation certificate" in text else "no_certificate")
+    elif "certificate" in text:
+        out.append("certificate")
+    if any(w in text for w in GOODIE_WORDS):
+        out.append("goodies")
     return out
 
 
@@ -93,7 +102,6 @@ def parse(raw: dict) -> Event:
         is_paid=raw["isPaid"] if isinstance(raw.get("isPaid"), bool) else None,
         prize_text=prize_text,
         prize_amount_inr=prize,
-        perks=_perks(raw.get("prizes")),
         eligibility_text=strip_html(", ".join(_eligible(raw)), 300),
         eligible_degrees=degrees_from_unstop(_eligible(raw)),
         posted_at=parse_date(raw.get("approved_date")),   # when Unstop published it; their own list is newest-first by it
@@ -135,6 +143,7 @@ def enrich(client, events: list[Event], known: dict[str, str | None], limit: int
     done = 0
     for e in todo[:limit]:
         comp = (client.get_json(DETAIL_URL.format(int(e.source_event_id))).get("data") or {}).get("competition") or {}
+        e.perks = _detail_perks(comp)
         e.rounds = parse_rounds(comp)
         if e.end_date:   # organizers sometimes add notices as "rounds" dated after the event (seen 29 Sep)
             last = (e.end_date + timedelta(days=1)).isoformat()
