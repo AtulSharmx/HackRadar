@@ -131,15 +131,11 @@ export default function EventDetail() {
   const far = km != null ? whereShort({ ...event, mode: 'offline' }, km) : null; // "45 km", "about 20 km (approx.)"
   const team = teamSize(event.team_min, event.team_max);
   const themes = (event.themes || []).filter((t) => t !== 'other');
-  // Unstop only, from its detail API. participation_certificate gives a real Yes/No; goodies have no
-  // negative flag, so an unmentioned goodie is "Not listed", never a made-up "No".
+  // Unstop only, from its detail API. "No" is never invented: Unstop's 0 means the certificate
+  // feature wasn't enabled, not that the organizer gives none. Confirmed = Yes, else Not listed.
   const perks = event.perks || [];
-  const goodies = perks.length
-    ? (perks.includes('goodies') ? 'Yes' : perks.includes('no_goodies') ? 'No' : 'Not listed')
-    : null;
-  const certificate = perks.length
-    ? (perks.includes('certificate') ? 'Yes' : perks.includes('no_certificate') ? 'No' : 'Not listed')
-    : null;
+  const goodies = perks.length ? (perks.includes('goodies') ? 'Yes' : 'Not listed') : null;
+  const certificate = perks.length ? (perks.includes('certificate') ? 'Yes' : 'Not listed') : null;
   const summary = [
     feeLong(event.fee_amount, event.is_paid),
     MODE_NAMES[event.mode],
