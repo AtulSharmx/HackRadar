@@ -14,7 +14,7 @@ USER_AGENT = "HackRadar/0.1 (personal hackathon finder" + (f"; {_contact}" if _c
 
 REQUEST_DELAY_S = 2.0   # min gap between requests to the same host
 MAX_PAGES = 20          # per source per run
-MAX_DETAILS_PER_RUN = 60  # detail pages per source per run; the rest wait for the next run
+MAX_DETAILS_PER_RUN = int(os.environ.get("MAX_DETAILS_PER_RUN", "60"))  # detail pages per source per run
 USD_TO_INR = 88.0       # fixed rate; converted prizes are marked approximate
 
 # trust rules (TRD "Trust labels"); tune here, not in trust.py

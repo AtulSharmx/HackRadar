@@ -48,11 +48,8 @@ def test_unstop_fixture():
     assert e.registration_deadline == datetime(2026, 10, 4, 14, 29, tzinfo=timezone.utc)
     assert e.team_min == 1 and e.solo_allowed and e.fee_amount == 0
     assert e.registration_url.startswith("https://unstop.com/")
-    # real rewards from the prize rows: certificate is a 1/0 flag, goodies come from "Unstop Merchandise"
-    assert e.perks == ["certificate", "goodies"]
-    assert next(x for x in events if x.title == "Growth Hack Challenge").perks == ["certificate", "no_goodies"]
-    assert next(x for x in events if x.title == "Hackathon - Flagship").perks == ["no_certificate", "no_goodies"]
-    assert next(x for x in events if x.title == "The Liar's Chatroom").perks == []
+    # rewards come from the detail API (enrich), never guessed from the list's winner-prize flag
+    assert e.perks == []
     paid = next(x for x in events if x.title == "National Young Programmers Olympiad")
     assert paid.fee_amount == 499 and paid.prize_amount_inr == 1_000_000
     assert e.to_row()["is_paid"] is False and paid.to_row()["is_paid"] is True
@@ -74,6 +71,18 @@ def test_rows_fit_table():
 
 
 # ---------- A1: Unstop details ----------
+
+def test_unstop_detail_perks():
+    comp = load("unstop_detail_1762222.json")["data"]["competition"]
+    assert unstop._detail_perks(comp) == ["certificate", "goodies"]
+    # participation_certificate is the real event-level flag; winner prizes must not override it
+    assert unstop._detail_perks({"participation_certificate": 1, "prizes": [{"certificate": 0}]}) == ["certificate"]
+    assert unstop._detail_perks({"participation_certificate": 0, "prizes": [{"certificate": 1, "others": "Winner certificate"}]}) == ["no_certificate"]
+    assert unstop._detail_perks({"participation_certificate": 0, "details": "Participation certificate for everyone"}) == ["certificate"]
+    assert unstop._detail_perks({"participation_certificate": 0, "overall_prizes": "₹50,000 in prizes"}) == ["no_certificate"]
+    assert unstop._detail_perks({"participation_certificate": 0, "overall_prizes": "Goodies for winners"}) == ["no_certificate", "goodies"]
+    assert unstop._detail_perks({}) == []
+
 
 def test_unstop_rounds_from_real_detail():
     comp = load("unstop_detail_1762222.json")["data"]["competition"]
