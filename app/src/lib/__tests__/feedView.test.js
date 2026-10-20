@@ -22,6 +22,18 @@ test('the Feed opens with every open hackathon, my interests ranked first', () =
   expect(defaultFilters({ ...PREFS, hide_warnings: true }).exclude_warnings).toBe(true); // an explicit "hide" stays
 });
 
+test('eligibility is opt-in: the app opens with every degree, the Filters sheet can narrow it', () => {
+  const degreePrefs = { ...PREFS, degree: 'bca' };
+  const schoolOnly = { ...base, id: 's', title: 'School Hack', eligible_degrees: ['school'] };
+  const list = [...E, schoolOnly];
+  expect(defaultFilters(degreePrefs).eligible_only).toBe(false);
+  const off = ids(applyView(list, { filters: defaultFilters(degreePrefs), prefs: degreePrefs, now: NOW }));
+  expect(off).toContain('s');
+  const on = ids(applyView(list, { filters: { ...defaultFilters(degreePrefs), eligible_only: true }, prefs: degreePrefs, now: NOW }));
+  expect(on).not.toContain('s');
+  expect(activeChips({ ...defaultFilters(degreePrefs), eligible_only: true }, true, 'BCA').map((c) => c.label)).toEqual(['Open to BCA']);
+});
+
 test('from a notification: exactly those events, filters and search set aside, still sorted', () => {
   const f = defaultFilters(PREFS); // would hide a (cybersecurity) and d (Mumbai)
   const only = new Set(['d', 'a', 'gone']); // 'gone' closed since the push: simply not shown

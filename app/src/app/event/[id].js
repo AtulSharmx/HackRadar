@@ -131,6 +131,11 @@ export default function EventDetail() {
   const far = km != null ? whereShort({ ...event, mode: 'offline' }, km) : null; // "45 km", "about 20 km (approx.)"
   const team = teamSize(event.team_min, event.team_max);
   const themes = (event.themes || []).filter((t) => t !== 'other');
+  // Unstop only, and only when the source actually said yes or no (collector perks)
+  const perks = event.perks || [];
+  const yesNo = (yes, no) => (perks.includes(yes) ? 'Yes' : perks.includes(no) ? 'No' : null);
+  const goodies = yesNo('goodies', 'no_goodies');
+  const certificate = yesNo('certificate', 'no_certificate');
   const summary = [
     feeLong(event.fee_amount, event.is_paid),
     MODE_NAMES[event.mode],
@@ -305,9 +310,11 @@ export default function EventDetail() {
             colors={colors}
           />
           <Row label="Venue" value={venue} colors={colors} />
+          <Row label="Prizes" value={prizeLong(event)} colors={colors} />
+          <Row label="Goodies" value={goodies} colors={colors} />
+          <Row label="Certificate" value={certificate} colors={colors} />
           <Row label="Team" value={team || (event.solo_allowed ? 'Solo allowed' : null)} colors={colors} />
           <Row label="Fee" value={feeLong(event.fee_amount, event.is_paid)} colors={colors} />
-          <Row label="Prizes" value={prizeLong(event)} colors={colors} />
           <Row label="Who can join" value={event.eligibility_text === 'All' ? 'Anyone' : event.eligibility_text} colors={colors} />
         </View>
 
