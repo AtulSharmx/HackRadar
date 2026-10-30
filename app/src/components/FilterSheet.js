@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { applyView, clearedFilters, FEE_CHOICES, feeChoice } from '../lib/feedView';
-import { DEGREES, THEMES } from '../lib/labels';
+import { DEGREES, PLATFORMS, THEMES } from '../lib/labels';
 import { space, type, useAppTheme } from '../theme';
 import Button from './Button';
 import Chip from './Chip';
@@ -35,6 +35,9 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
   const fee = feeChoice(f);
   const toggleTheme = (k) => set({ themes: f.themes.includes(k) ? f.themes.filter((t) => t !== k) : [...f.themes, k] });
   const modeKey = Object.keys(MODE_LISTS).find((k) => same(f.modes, MODE_LISTS[k])) || null;
+  const picked = f.platforms || [];
+  const togglePlatform = (k) => set({ platforms: picked.includes(k) ? picked.filter((p) => p !== k) : [...picked, k] });
+  const listed = PLATFORMS.filter(([k]) => events?.some((e) => (e.sources || []).includes(k))); // only ones with events now
   const degree = DEGREES.find((d) => d.key === prefs?.degree);
   const degreeLabel = degree ? (degree.key === 'other' ? 'college students' : degree.label) : null;
 
@@ -69,6 +72,13 @@ export default function FilterSheet({ visible, onClose, filters, onApply, onSave
           <Chip key={k} label={label} selected={f.themes.includes(k)} showRemove={false} onPress={() => toggleTheme(k)} />
         ))}
       </Group>
+      {listed.length > 1 ? (
+        <Group label="Platform">
+          {listed.map(([k, label]) => (
+            <Chip key={k} label={label} selected={picked.includes(k)} showRemove={false} onPress={() => togglePlatform(k)} />
+          ))}
+        </Group>
+      ) : null}
       <Group label={hasLocation ? 'Distance for offline events (km)' : 'Distance for offline events'}>
         {hasLocation ? (
           <Segmented options={DISTANCES} value={f.max_km ?? null} onChange={(km) => set({ max_km: km })} accessibilityLabel="Distance for offline events" />

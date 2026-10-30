@@ -171,8 +171,8 @@ def test_hack2skill_fixture():
     assert e.posted_at == datetime(2026, 4, 1, 8, 30, tzinfo=timezone.utc)   # registrationStart
     assert e.source_verified and not events["ImpactX'26"].source_verified   # FLAGSHIP vs COMMUNITY
     assert events["IBM Z Datathon 2026"].mode == "hybrid" and events["IBM Z Datathon 2026"].team_max is None
-    # in person with no city in the title: location unknown (could be abroad), so left out
-    assert not hack2skill.is_relevant(events["Build with AI: PromptWars"].__class__(
+    # in person with no city: location unknown, but kept (Hack2Skill is India-first); the trust label flags it
+    assert hack2skill.is_relevant(events["Build with AI: PromptWars"].__class__(
         **{**events["Build with AI: PromptWars"].__dict__, "registration_deadline": None}))
 
 
@@ -191,3 +191,68 @@ def test_hackerearth_keeps_only_hackathons():
     later = datetime(2099, 1, 1, tzinfo=timezone.utc)   # the fixture's dates pass; the hackathon check must not
     kept = {x.title for x in events if hackerearth.is_relevant(replace(x, registration_deadline=later))}
     assert kept == {"Agentic Banking Hackathon", "GoDaddy Inclusive Innovation Hackathon 2026"}   # hiring challenge dropped
+
+
+def test_goodies_are_whole_words_only():
+    assert unstop._detail_perks({"participation_certificate": 1, "details": "real-world bottlenecks and merchant payments, see Swagger"}) == ["certificate"]
+    assert unstop._detail_perks({"participation_certificate": 1, "details": "Swags and a water bottle"}) == ["certificate", "goodies"]
+
+
+def test_hack2skill_keeps_in_person_events_with_no_city_unless_abroad():
+    later = datetime(2099, 1, 1, tzinfo=timezone.utc)
+    def event(title):
+        return hack2skill.parse({"_id": "1", "title": title, "eventUrl": "x", "mode": "OFFLINE", "registrationEnd": later.isoformat()})
+    assert hack2skill.is_relevant(event("Startup Buildathon India 2026"))
+    assert not hack2skill.is_relevant(event("Build with AI - GCC Edition"))
+
+
+KNOWAFEST_PAGE = """<script type="application/ld+json">{"@type":"BreadcrumbList"}</script>
+<script type="application/ld+json">{"@type":"Event","name":"SDG Hackathon &amp; Expo","description":"Machine learning for good",
+"startDate":"2099-11-04T09:00:00+05:30","endDate":"2099-12-02T17:00:00+05:30",
+"eventAttendanceMode":"https://schema.org/OfflineEventAttendanceMode",
+"location":{"@type":"Place","name":"SRM Campus","address":{"addressLocality":"Chennai","addressRegion":"Tamil Nadu","addressCountry":"India"}},
+"organizer":{"name":"SRM Institute"},"offers":{"price":"399.00","priceCurrency":"INR","url":"https://forms.gle/abc"}}</script>
+<p>Registration deadline / Important dates</p><p>05.11.2099</p><p>Registration Fees</p>"""
+
+
+def test_knowafest_reads_the_event_page_and_a_day_first_deadline():
+    from collector.adapters import knowafest
+    raw = {"slug": "sdg-hackathon", "data": knowafest.event_data(KNOWAFEST_PAGE), "deadline": knowafest.deadline_from(KNOWAFEST_PAGE), "link": None}
+    e = knowafest.parse(raw)
+    assert (e.title, e.organizer, e.mode, e.city, e.fee_amount) == ("SDG Hackathon & Expo", "SRM Institute", "offline", "Chennai", 399)
+    assert e.registration_url == "https://forms.gle/abc" and e.event_url.endswith("/event/sdg-hackathon")
+    assert e.registration_deadline == datetime(2099, 11, 5, 18, 29, tzinfo=timezone.utc)   # 5 November, not 11 May
+    assert knowafest.is_relevant(e) and "ai_ml" in e.themes
+    feed = "<item><title>Med Fest</title><link>https://www.knowafest.com/event/med</link><category>Conferences</category></item>" \
+           "<item><title>Code Fest</title><link>https://www.knowafest.com/event/code</link><category>Hackathons</category></item>"
+    assert knowafest.slugs_from('href="https://www.knowafest.com/event/a"', feed) == ["a", "code"]
+
+
+def test_ethglobal_keeps_only_india_and_online():
+    from collector.adapters import ethglobal
+    page = (r'{\"id\":527,\"name\":\"ETHGlobal Mumbai\",\"slug\":\"mumbai\",\"type\":\"hackathon\",\"medium\":\"physical\",'
+            r'\"startTime\":\"2099-11-05T00:00:00.000Z\",\"endTime\":\"2099-11-07T00:00:00.000Z\",\"status\":\"future\",'
+            r'\"signupDeadline\":\"2099-11-03T18:29:00.000Z\",\"city\":{\"id\":1,\"name\":\"Mumbai\",\"country\":{\"id\":105,\"name\":\"India\"}}},'
+            r'{\"id\":528,\"name\":\"ETHGlobal Tokyo\",\"slug\":\"tokyo\",\"type\":\"hackathon\",\"medium\":\"physical\",'
+            r'\"startTime\":\"2099-12-05T00:00:00.000Z\",\"endTime\":\"2099-12-07T00:00:00.000Z\",\"status\":\"future\",'
+            r'\"signupDeadline\":null,\"city\":{\"id\":2,\"name\":\"Tokyo\",\"country\":{\"id\":9,\"name\":\"Japan\"}}},'
+            r'{\"id\":529,\"name\":\"ETHOnline\",\"slug\":\"ethonline\",\"type\":\"hackathon\",\"medium\":\"virtual\",'
+            r'\"startTime\":\"2099-12-05T00:00:00.000Z\",\"endTime\":\"2099-12-07T00:00:00.000Z\",\"status\":\"future\",\"signupDeadline\":null}')
+    events = {e.title: e for e in map(ethglobal.parse, ethglobal.events_in(page))}
+    mumbai = events["ETHGlobal Mumbai"]
+    assert (mumbai.city, mumbai.mode, mumbai.organizer) == ("Mumbai", "offline", "ETHGlobal")
+    assert mumbai.registration_deadline == datetime(2099, 11, 3, 18, 29, tzinfo=timezone.utc) and "blockchain" in mumbai.themes
+    assert ethglobal.is_relevant(mumbai) and ethglobal.is_relevant(events["ETHOnline"]) and not ethglobal.is_relevant(events["ETHGlobal Tokyo"])
+
+
+def test_hackster_contest_cards():
+    from collector.adapters import hackster
+    card = ('<a class="hckui__typography__link" href="/contests/infineon-boss-battle"><h4 class="x">Infineon Boss Battle</h4></a>'
+            '<span>With </span><a class="hckui__typography__linkBlue" href="https://www.hackster.io/infineon">Infineon</a>'
+            '<p class="y">Participation open until:</p><p class="z">Jan 04, 2099</p>')
+    raws = hackster.contests_in(card + card)   # the page repeats each card for mobile
+    assert len(raws) == 1
+    e = hackster.parse(raws[0])
+    assert (e.title, e.organizer, e.mode, e.themes) == ("Infineon Boss Battle", "Infineon", "online", ["iot_hardware"])
+    assert e.registration_url == "https://www.hackster.io/contests/infineon-boss-battle" and hackster.is_relevant(e)
+    assert e.registration_deadline == datetime(2099, 1, 4, 18, 29, tzinfo=timezone.utc)

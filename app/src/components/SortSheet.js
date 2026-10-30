@@ -9,7 +9,7 @@ import Sheet from './Sheet';
 
 // What each order is based on, so the order is never a mystery
 const HINTS = {
-  best: 'Your interests, distance, fee, deadline and trust',
+  best: 'Distance, fee, deadline and trust, mixed across platforms',
   closing: 'Registration deadline, soonest first',
   newest: 'When it was posted on the source',
   nearest: 'Offline and hybrid first, by distance from you',

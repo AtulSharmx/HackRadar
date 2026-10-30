@@ -1,4 +1,5 @@
 """Unstop: public JSON at /api/public/opportunity/search-result (allowed by robots.txt)."""
+import re
 from datetime import datetime, timedelta, timezone
 
 from .. import config
@@ -30,7 +31,8 @@ def _prize(prizes) -> tuple[int | None, str | None]:
 
 
 # Unstop's prize rows carry certificate as a real 1/0 flag; goodies only appear in the "others" text.
-GOODIE_WORDS = ("goodie", "goody", "merch", "swag", "t-shirt", "tshirt", "t shirt", "sticker", "hoodie", "backpack", "bottle")
+# Whole words: "bottle" must not match "bottlenecks" (showed a false Yes on 2 of 25 events, 30 Oct 2026), nor "merch" "merchant".
+GOODIES = re.compile(r"\b(goodies|goodie|goody|merch|merchandise|swags?|t-?shirts?|t shirts?|stickers?|hoodies?|backpacks?|bottles?)\b")
 
 
 def _detail_perks(comp: dict) -> list[str]:
@@ -52,7 +54,7 @@ def _detail_perks(comp: dict) -> list[str]:
         out.append("certificate" if "participation certificate" in text else "no_certificate")
     elif "certificate" in text:
         out.append("certificate")
-    if any(w in text for w in GOODIE_WORDS):
+    if GOODIES.search(text):
         out.append("goodies")
     return out
 

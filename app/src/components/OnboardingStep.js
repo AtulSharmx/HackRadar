@@ -6,7 +6,7 @@ import { layout, space, type, useAppTheme } from '../theme';
 import Button from './Button';
 import IconButton from './IconButton';
 
-const TOTAL = 5;
+const TOTAL = 4;
 
 // One onboarding step (brief: progress dots top, big question, options middle, Next + Skip at the bottom).
 export default function OnboardingStep({ step, title, subtitle, children, next, skip }) {
@@ -15,7 +15,7 @@ export default function OnboardingStep({ step, title, subtitle, children, next, 
   return (
     <KeyboardAvoidingView behavior="padding" style={[styles.screen, { backgroundColor: colors.background }]}>
       <View style={[styles.top, { paddingTop: insets.top + space.xs }]}>
-        {/* steps 2-5 can go back; Android's back button does the same */}
+        {/* steps after the first can go back; Android's back button does the same */}
         {step > 1 ? (
           <IconButton icon="arrow-left" label="Back" onPress={() => router.back()} />
         ) : (

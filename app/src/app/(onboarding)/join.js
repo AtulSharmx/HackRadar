@@ -13,7 +13,7 @@ const FEES = [['free', 'Free only'], ['any', 'Free and paid']];
 
 const same = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
-// Step 3: how you want to join. Defaults: Both, free and paid. Degree hides listings closed to it (school-only,
+// Step 2: how you want to join. Defaults: Both, free and paid. Degree hides listings closed to it (school-only,
 // postgraduate-only...); year is not asked: no source says which years may enter (launch audit, 10 Oct 2026).
 export default function Join() {
   const { draft, update } = useDraft();
@@ -25,7 +25,7 @@ export default function Join() {
 
   const next = () => router.push('/location');
   return (
-    <OnboardingStep step={3} title="How do you want to join?" next={{ label: 'Next', onPress: next }} skip={next}>
+    <OnboardingStep step={2} title="How do you want to join?" next={{ label: 'Next', onPress: next }} skip={next}>
       <Group label="Mode">
         <Segmented
           options={MODES}
@@ -42,7 +42,7 @@ export default function Join() {
           accessibilityLabel="Fee"
         />
       </Group>
-      <Group label="Degree" note="Hackathons not open to your degree (like school-only ones) stay hidden.">
+      <Group label="Degree" note="Alerts skip hackathons not open to your degree. Filters can hide them in the Feed too.">
         {DEGREES.map((d) => radio(draft.degree === d.key, d.label, () => pickDegree(d.key)))}
       </Group>
     </OnboardingStep>

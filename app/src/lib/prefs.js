@@ -7,7 +7,6 @@ import { supabase } from './supabase';
 const KEY = 'hackradar.prefs.v1';
 
 export const DEFAULT_PREFS = {
-  themes: [],
   modes: ['online', 'offline', 'hybrid'],
   fee_max: null, // null = any fee
   degree: null,
@@ -28,11 +27,11 @@ export const round2 = (x) => (x == null ? null : Math.round(x * 100) / 100);
 export function toDeviceRow(p) {
   return {
     prefs: {
-      themes: p.themes, modes: p.modes, fee_max: p.fee_max, degree: p.degree,
+      modes: p.modes, fee_max: p.fee_max, degree: p.degree,
       year: p.year, max_km: p.max_km, hide_warnings: p.hide_warnings,
     },
     alert_filter: {
-      themes: p.themes, modes: p.modes, fee_max: p.fee_max, max_km: p.max_km,
+      modes: p.modes, fee_max: p.fee_max, max_km: p.max_km,
       closing_within_days: null, solo_only: false, exclude_warnings: p.hide_warnings, eligible_only: true,
     },
     city: p.city,
@@ -43,10 +42,17 @@ export function toDeviceRow(p) {
   };
 }
 
-function read() {
+export function read() {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
-    return raw ? JSON.parse(raw) : { prefs: null, dirty: false };
+    if (!raw) return { prefs: null, dirty: false };
+    const saved = JSON.parse(raw);
+    // the interests question is gone (30 Oct 2026): old answers must not keep ranking my Feed or narrowing alerts
+    if (saved.prefs?.themes) {
+      const { themes, ...prefs } = saved.prefs;
+      return { prefs, dirty: true };
+    }
+    return saved;
   } catch {
     return { prefs: null, dirty: false };
   }

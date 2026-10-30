@@ -3,8 +3,8 @@ robots.txt allows it; Terms of Service (hack2skill.com/legacy/tnc) have no claus
 (checked 30 Sep 2026).
 
 The list has no city, venue or organizer, and no amount for paid events, and there is no public detail API
-(404), so none of those are filled in. In-person events are kept only when the title names an Indian city:
-their location is otherwise unknown and could be abroad ("GCC Edition").
+(404), so none of those are filled in. In-person events with no city are kept unless the title points abroad
+("GCC Edition"): their location is unknown, and the trust label says so.
 """
 import re
 from datetime import datetime, timedelta, timezone
@@ -15,6 +15,7 @@ from ..normalize import classify_themes, find_indian_city, parse_date, strip_htm
 
 name = "hack2skill"
 URL = "https://hack2skill.com/api/v1/innovator/public/event/public-list"
+ABROAD = re.compile(r"\b(gcc|dubai|uae|saudi|qatar|oman|kuwait|bahrain|singapore|malaysia|indonesia|africa|europe|usa)\b", re.I)
 MODES = {"VIRTUAL": "online", "ONLINE": "online", "IN_PERSON": "offline", "OFFLINE": "offline", "HYBRID": "hybrid"}
 
 
@@ -77,5 +78,6 @@ def parse(raw: dict) -> Event:
 
 def is_relevant(e: Event) -> bool:
     still_open = e.registration_deadline is None or e.registration_deadline > datetime.now(timezone.utc)
-    # hybrid can be joined online; in-person only with a known Indian city
-    return bool(e.source_url) and e.is_open and still_open and (e.mode in ("online", "hybrid") or bool(e.in_india))
+    # An in-person event with no city is kept (Hack2Skill is India-first; 6 real ones were being dropped, 30 Oct
+    # 2026) unless its title points abroad. The trust label then says to check the details.
+    return bool(e.source_url) and e.is_open and still_open and not ABROAD.search(e.title)

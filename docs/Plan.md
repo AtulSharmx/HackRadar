@@ -174,3 +174,8 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   - OTA to preview (runtime 64776585). After it, app.json blocks SYSTEM_ALERT_WINDOW and storage
     permissions, so the next APK/AAB has a new runtime. Play steps and Data safety answers: docs/play-console.md.
   - Repo moved to github.com/AtulSharmx/HackRadar; its Actions secrets must be added there.
+- 30 Oct 2026, owner's check and fixes: interests question removed (app, alerts, one-time cleanup in 0019; Themes stays
+  as a Filter). 92% of events were from Unstop: ETHGlobal and Hackster added, Hack2Skill widened, Best match shows at most
+  2 in a row from one platform, Platform filter and a platform name on every card, links out to Devpost/MLH/Devnovate/lablab.
+  Goodies words matched "bottlenecks": now whole words. Feed count line and Profile version line removed (owner). The
+  next native build should also take the 12 newer Expo patch versions (expo-doctor); they change the fingerprint, so OTA alone can't.

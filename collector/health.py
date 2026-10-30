@@ -6,8 +6,8 @@ from .normalize import IST
 from .telegram import esc, send
 
 WINDOW_HOURS = float(os.environ.get("HEALTH_WINDOW_HOURS", "48"))
-# Sources whose list is mostly corporate challenges: days with no hackathon are normal, only errors alert
-ZERO_OK = {"hackerearth"}
+# Small lists: days with no open event for us are normal, only errors alert
+ZERO_OK = {"hackerearth", "ethglobal", "hackster"}
 
 
 def _ist(ts: str | None) -> str:

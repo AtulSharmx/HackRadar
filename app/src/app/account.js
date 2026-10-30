@@ -123,7 +123,7 @@ export default function AccountScreen() {
     }
     setTimeout(() => {
       if (restored) router.replace('/');
-      else if (!onboarded) router.replace('/interests'); // signed in, now set up the feed
+      else if (!onboarded) router.replace('/join'); // signed in, now set up the feed
       else if (router.canGoBack()) router.back();
       else router.replace('/'); // came from the lock after log out: nothing behind this screen
     }, 1100);

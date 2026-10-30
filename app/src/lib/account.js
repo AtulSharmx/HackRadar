@@ -234,7 +234,7 @@ export async function finishFromLink(params) {
 // A new phone signing in before onboarding: the account's own feed setup, if it has one
 export async function savedPrefsOf(user) {
   const { data } = await supabase.from('devices').select('prefs,city,state,lat_rounded,lng_rounded,alerts_enabled').eq('id', user.id).maybeSingle();
-  if (!data?.prefs?.themes?.length) return null;
+  if (!data?.prefs?.modes) return null;
   return {
     ...data.prefs,
     city: data.city,
