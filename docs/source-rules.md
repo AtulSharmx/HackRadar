@@ -37,3 +37,19 @@
 - The owner accepted this as changing hosts, not disguising the client. If a source asks us to stop, we stop.
 - Public app: Devpost is OFF (`SOURCES=unstop`) until Devpost grants permission (drafts in docs/outreach.md).
   Devpost-only events were marked stale; they return automatically if Devpost is re-enabled.
+
+## More well-known platforms (checked 30 Oct 2026)
+The owner asked for well-known platforms because 92% of open events came from Unstop. robots.txt and Terms were read for each.
+
+| Platform | Verdict | Why |
+|---|---|---|
+| ETHGlobal | in use | no robots.txt, Terms have no clause against automated access; only India and online editions kept |
+| Hackster | in use | robots.txt allows /contests, Terms have no such clause; online hardware contests |
+| Hack2Skill | wider | in-person events with no city are now kept unless the title points abroad (6 were being dropped) |
+| KnowAFest | built, off | allowed and has real college hackathons, but the owner wants well-known names; `SOURCES=...,knowafest` turns it on |
+| Devpost, MLH, Devnovate, lablab.ai, Luma, TechGig, Where U Elevate, Hackathon.com | not read | their Terms forbid copying or reuse of site content; the Feed links out to the first four instead |
+| GeeksforGeeks, HackQuest | not read | Terms forbid automated access / scraping |
+| DoraHacks | not read | answers with a human-verification page: that is a block, we stop |
+| Reskilll | not built | allowed, but no open events and not widely known |
+
+Permission from Devpost would add the most (about 70 events). Drafts: docs/outreach.md.

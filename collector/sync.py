@@ -63,6 +63,7 @@ def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dic
         merged["status"] = "open"
         # verified by any platform that lists it (merge would otherwise keep only one row's False/True)
         merged["source_verified"] = any(r.get("source_verified") for r in by_source.values()) or bool((old or {}).get("source_verified"))
+        merged["sources"] = sorted(sources_of[event_id])   # the Feed mixes and filters by platform
         merged["warnings"] = trust.red_flags(merged, by_source)
         merged["trust_label"] = trust.label(merged, merged["warnings"], sources_of[event_id])
         merged["fingerprint"] = changes.fingerprint(merged)

@@ -1,7 +1,7 @@
 // Search, filters and sort for the Feed. Filtering reuses match.matches, so the feed and the alerts
 // apply a filter the same way (same rules as shared/match_cases.json).
 import { matches, score } from './match';
-import { THEME_NAMES } from './labels';
+import { PLATFORM_NAMES, THEME_NAMES } from './labels';
 
 export const SORTS = [
   ['best', 'Best match'],
@@ -28,7 +28,7 @@ export function defaultFilters(prefs) {
 export function clearedFilters() {
   return {
     themes: [], modes: ALL_MODES, fee_max: null, paid_only: false, max_km: null,
-    closing_within_days: null, solo_only: false, exclude_warnings: false, eligible_only: false,
+    closing_within_days: null, solo_only: false, exclude_warnings: false, eligible_only: false, platforms: [],
   };
 }
 
@@ -69,6 +69,10 @@ export function activeChips(f, hasLocation, degreeLabel = null) {
     const names = f.themes.map((t) => THEME_NAMES[t] || t);
     chips.push({ key: 'themes', label: names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', '), clear: (x) => ({ ...x, themes: [] }) });
   }
+  if (f.platforms?.length) {
+    const names = f.platforms.map((p) => PLATFORM_NAMES[p] || p);
+    chips.push({ key: 'platforms', label: names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', '), clear: (x) => ({ ...x, platforms: [] }) });
+  }
   if (f.modes?.length && f.modes.length < ALL_MODES.length) {
     chips.push({ key: 'modes', label: f.modes.includes('online') ? 'Online only' : 'Offline and hybrid', clear: (x) => ({ ...x, modes: ALL_MODES }) });
   }
@@ -92,6 +96,31 @@ const byDeadline = (a, b) => {
   return a.registration_deadline.localeCompare(b.registration_deadline);
 };
 
+// The platform an event is credited to: the other one when Unstop isn't the only place listing it.
+export const platformOf = (e) => (e.sources || []).find((s) => s !== 'unstop') || e.sources?.[0] || null;
+
+// About 9 in 10 listings are on Unstop, so plain ranking shows a wall of one site (user, 30 Oct 2026). Never more
+// than 2 in a row from one platform while another still has an event that can be lifted.
+export function mixPlatforms(list, canLift = () => true) {
+  const rest = [...list];
+  const out = [];
+  let last = null;
+  let run = 0;
+  while (rest.length) {
+    let i = 0;
+    if (run >= 2 && platformOf(rest[0]) === last) {
+      const other = rest.findIndex((e) => platformOf(e) !== last && canLift(e));
+      if (other > 0) i = other;
+    }
+    const [e] = rest.splice(i, 1);
+    const p = platformOf(e);
+    run = p === last ? run + 1 : 1;
+    last = p;
+    out.push(e);
+  }
+  return out;
+}
+
 // Search (title + organizer) -> filters -> sort. Returns the list the Feed renders.
 // only: a Set of event ids from a tapped notification; then exactly those show (search and filters
 // don't apply: the collector already matched them to this person), in the chosen order.
@@ -101,6 +130,7 @@ export function applyView(events, { query = '', filters, sort = 'best', prefs, n
   let list = events.filter((e) => {
     if (only) return only.has(e.id);
     if (q && !`${e.title} ${e.organizer || ''}`.toLowerCase().includes(q)) return false;
+    if (filters?.platforms?.length && !(e.sources || []).some((s) => filters.platforms.includes(s))) return false;
     return matches(e, device, now);
   });
 
@@ -108,9 +138,10 @@ export function applyView(events, { query = '', filters, sort = 'best', prefs, n
     : Math.hypot(e.lat - device.lat_rounded, (e.lng - device.lng_rounded) * Math.cos((e.lat * Math.PI) / 180)));
 
   if (sort === 'best') {
-    const scored = new Map(list.map((e) => [e.id, score(e, device, now)[0]]));
+    const scored = new Map(list.map((e) => [e.id, score(e, device, now)]));
     // many events tie at 100: the closer deadline wins the tie
-    list = [...list].sort((a, b) => scored.get(b.id) - scored.get(a.id) || byDeadline(a, b));
+    list = [...list].sort((a, b) => scored.get(b.id)[0] - scored.get(a.id)[0] || byDeadline(a, b));
+    list = mixPlatforms(list, (e) => scored.get(e.id)[1].distance > 0); // never lift one I can't get to
   } else if (sort === 'closing') {
     list = list.filter((e) => e.registration_deadline).sort(byDeadline); // unknown deadlines excluded (App Flow)
   } else if (sort === 'newest') {

@@ -8,6 +8,8 @@ import { select, tap, thud } from '../lib/haptics';
 import { layout, motion, radius, space, type, useAppTheme } from '../theme';
 import PressableScale from './PressableScale';
 import { TRUST } from './TrustLabel';
+import { platformOf } from '../lib/feedView';
+import { PLATFORM_NAMES } from '../lib/labels';
 
 const TONE_ICON = { urgent: 'clock-alert-outline', soon: 'clock-outline', neutral: 'clock-outline', muted: 'clock-remove-outline' };
 const MODE_ICON = { online: 'web', offline: 'map-marker-outline', hybrid: 'map-marker-radius-outline' };
@@ -70,9 +72,13 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
   const prize = prizeShort(event.prize_amount_inr, event.prize_approximate);
   const warning = event.trust_label === 'warning';
 
+  // the platform comes first so a long organizer name can't cut it off
+  const platform = PLATFORM_NAMES[platformOf(event)];
+  const byline = [platform, event.organizer].filter(Boolean).join(' · ');
+
   // TalkBack reads the card as one sentence (brief: Accessibility rules)
   const spoken = [
-    event.title + (event.organizer ? ` by ${event.organizer}` : ''),
+    event.title + (event.organizer ? ` by ${event.organizer}` : '') + (platform ? `, on ${platform}` : ''),
     cd.text,
     // "Online" and "Hybrid · 12 km" already name the mode
     (event.mode === 'offline' ? `offline, ${where}` : where).replace('km', 'kilometres'),
@@ -125,9 +131,9 @@ function EventCard({ event, km = null, saved = false, onPress, onLongPress, onTo
         <Text style={[type.cardTitle, { color: colors.textPrimary }]} numberOfLines={2}>
           {event.title}
         </Text>
-        {event.organizer ? (
+        {byline ? (
           <Text style={[type.meta, styles.organizer, { color: colors.textSecondary }]} numberOfLines={1}>
-            {event.organizer}
+            {byline}
           </Text>
         ) : null}
         <View style={styles.metaRow}>

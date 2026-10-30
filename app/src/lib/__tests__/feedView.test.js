@@ -1,4 +1,4 @@
-import { activeChips, applyView, clearedFilters, defaultFilters, FEE_CHOICES, feeChoice, pageOf } from '../feedView';
+import { FEE_CHOICES, activeChips, applyView, clearedFilters, defaultFilters, feeChoice, mixPlatforms, pageOf, platformOf } from '../feedView';
 
 const NOW = new Date('2026-09-29T06:30:00Z');
 const PREFS = { themes: ['ai_ml'], modes: ['online', 'offline', 'hybrid'], fee_max: null, max_km: 50, hide_warnings: false, lat: 28.46, lng: 77.03 };
@@ -111,4 +111,19 @@ test('pages of 10, clamped to the pages that exist', () => {
   expect(pageOf(list, 3).items).toEqual([20, 21, 22]);
   expect(pageOf(list, 9).page).toBe(3); // filters shrank the list under the page I was on
   expect(pageOf([], 1)).toEqual({ items: [], page: 1, pages: 1 });
+});
+
+test('Best match never shows a long run of one platform while another can be lifted', () => {
+  const on = (id, source) => ({ ...base, id, title: id, sources: [source] });
+  const list = [on('u1', 'unstop'), on('u2', 'unstop'), on('u3', 'unstop'), on('u4', 'unstop'), on('d1', 'devfolio'), on('h1', 'hackerearth')];
+  expect(ids(mixPlatforms(list))).toEqual(['u1', 'u2', 'd1', 'u3', 'u4', 'h1']);
+  expect(ids(mixPlatforms(list, (e) => e.id !== 'd1'))).toEqual(['u1', 'u2', 'h1', 'u3', 'u4', 'd1']); // can't get to d1: not lifted
+  expect(platformOf({ sources: ['devfolio', 'unstop'] })).toBe('devfolio'); // listed on both: credit the other one
+});
+
+test('the Platform filter keeps only events listed there', () => {
+  const list = [{ ...base, id: 'u', sources: ['unstop'] }, { ...base, id: 'd', sources: ['devfolio', 'unstop'] }];
+  const f = { ...clearedFilters(), platforms: ['devfolio'] };
+  expect(ids(applyView(list, { filters: f, prefs: PREFS, now: NOW }))).toEqual(['d']);
+  expect(activeChips(f, true).map((c) => c.label)).toEqual(['Devfolio']);
 });

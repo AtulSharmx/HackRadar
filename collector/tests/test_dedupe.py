@@ -66,3 +66,13 @@ def test_online_vs_offline_with_similar_titles_is_not_even_a_review():
     a = row("Grand Innovation Challenge", "Digdoh", mode="offline")
     b = row("Graphiques Innovation Challenge", None, mode="online")
     assert d.score(a, b) < d.REVIEW_AT
+
+
+def test_same_name_and_deadline_merge_across_a_place_name_unless_both_organizers_are_known():
+    unstop = {"title": "The Big Hack 2.0", "city": "Bengaluru", "mode": "offline", "organizer": "Acharya Institute",
+              "registration_deadline": "2026-11-10T18:29:00+00:00"}
+    devfolio = {"title": "The Big Hack 2.0", "city": "Soladevanahalli", "mode": "offline", "organizer": None,
+                "registration_deadline": "2026-11-10T18:29:00+00:00"}
+    assert d.score(unstop, devfolio) >= d.MERGE_AT
+    other_host = {**devfolio, "city": "Mohali", "organizer": "Chandigarh University"}
+    assert d.score(unstop, other_host) < d.MERGE_AT      # franchise events keep their own editions

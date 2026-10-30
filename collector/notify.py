@@ -158,15 +158,15 @@ def _events(db, ids) -> dict:
 
 
 def push_devices(db) -> list[tuple[dict, list[str]]]:
-    """(device, its tokens) for devices with alerts on and at least one phone registered. A device with
-    no themes in its filter is skipped: an empty filter would match every event."""
+    """(device, its tokens) for devices with alerts on and at least one phone registered. A device that
+    never finished onboarding is skipped: with no answers at all, its filter would match every event."""
     tokens: dict[str, list[str]] = {}
     for t in db.select_all("push_tokens", select="expo_push_token,user_id"):
         tokens.setdefault(t["user_id"], []).append(t["expo_push_token"])
     if not tokens:
         return []
     return [(d, tokens[d["id"]]) for d in db.select_all("devices", select="*", alerts_enabled="is.true")
-            if d["id"] in tokens and match.filter_of(d).get("themes")]
+            if d["id"] in tokens and d.get("prefs")]
 
 
 def push_new_matches(db, new_ids: list[str], now: datetime | None = None) -> int:

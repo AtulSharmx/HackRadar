@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { startTransition, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import Banner from '../../components/Banner';
@@ -31,6 +31,11 @@ import { useFeed } from '../../lib/useFeed';
 import { CHROME_MAX_SCALE, layout, motion, radius, space, type, useAppTheme } from '../../theme';
 
 // built once, not on every render: cards of a new page fade up in a quick stagger, kept ones glide
+// Big platforms whose terms don't allow copying their listings: a way there, none of their data (30 Oct 2026)
+const MORE_SITES = [
+  ['Devpost', 'https://devpost.com/hackathons'], ['MLH', 'https://mlh.io/events'],
+  ['Devnovate', 'https://devnovate.co/events'], ['lablab.ai', 'https://lablab.ai/ai-hackathons'],
+];
 const ENTER = [0, 1, 2, 3, 4, 5].map((i) => FadeInDown.duration(motion.base).delay(i * 18));
 const GLIDE = LinearTransition.duration(motion.base);
 const CHIP_IN = FadeIn.duration(motion.fast);
@@ -355,9 +360,12 @@ export default function FeedScreen() {
         {shown.length ? (
           <>
             {pages > 1 ? <Pager page={current} pages={pages} onGo={goPage} colors={colors} /> : null}
-            <Text style={[type.meta, styles.footer, { color: colors.textSecondary }]}>
-              {shown.length} of {events.length} open hackathons · Updated {ago(fetchedAt)}
-            </Text>
+            <View style={styles.moreSites}>
+              <Text style={[type.meta, { color: colors.textSecondary }]}>More on</Text>
+              {MORE_SITES.map(([label, url]) => (
+                <Chip key={label} label={label} role="button" showRemove={false} onPress={() => Linking.openURL(url).catch(() => {})} />
+              ))}
+            </View>
             <Button label="Know one that's missing? Submit it" variant="text" onPress={() => router.push('/submit')} style={styles.submitLink} />
           </>
         ) : null}
@@ -434,6 +442,6 @@ const styles = StyleSheet.create({
   },
   pageBtnOff: { opacity: 0.35 },
   pageText: { flex: 1, textAlign: 'center', fontVariant: ['tabular-nums'] },
-  footer: { textAlign: 'center', marginTop: space.lg },
+  moreSites: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: space.sm, marginTop: space.lg },
   submitLink: { alignSelf: 'center' },
 });

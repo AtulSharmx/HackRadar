@@ -13,9 +13,8 @@ import Segmented from '../../components/Segmented';
 import SwitchRow from '../../components/SwitchRow';
 import { useToast } from '../../components/Toast';
 import { deleteAccount, explain, logOut, PRIVACY_URL } from '../../lib/account';
-import { versionLine } from '../../lib/appUpdates';
 import { select, success } from '../../lib/haptics';
-import { DEGREES, THEMES } from '../../lib/labels';
+import { DEGREES } from '../../lib/labels';
 import { turnOnNotifications } from '../../lib/notificationPermission';
 import { usePrefs } from '../../lib/prefs';
 import { registerPush, usePushStatus } from '../../lib/push';
@@ -141,7 +140,6 @@ export default function SettingsScreen() {
   const saved = useSaved();
   const toast = useToast();
   const [cityOpen, setCityOpen] = useState(false);
-  const [lastThemeNote, setLastThemeNote] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [batteryOpen, setBatteryOpen] = useState(false);
@@ -149,12 +147,6 @@ export default function SettingsScreen() {
   if (!prefs) return null; // onboarding not finished: this tab isn't reachable then
   const update = (patch) => save({ ...prefs, ...patch });
 
-  const themes = prefs.themes || [];
-  const toggleTheme = (k) => {
-    if (themes.includes(k) && themes.length === 1) return setLastThemeNote(true); // at least one, as in onboarding
-    setLastThemeNote(false);
-    update({ themes: themes.includes(k) ? themes.filter((t) => t !== k) : [...themes, k] });
-  };
   const modeKey = Object.keys(MODE_LISTS).find((k) => same(prefs.modes || [], MODE_LISTS[k])) || 'both';
   const pickDegree = (key) => update({ degree: prefs.degree === key ? null : key });
 
@@ -223,15 +215,6 @@ export default function SettingsScreen() {
         <AccountCard colors={colors} onLogOut={confirmLogOut} leaving={leaving} />
 
         <Section title="YOUR FEED" colors={colors}>
-          <Item
-            label="Interests"
-            hint={lastThemeNote ? 'Keep at least one. Pick another before removing this one.' : 'These come first in your Feed and decide your alerts.'}
-            colors={colors}
-          >
-            <View style={styles.chips}>
-              {THEMES.map(([k, label]) => chip(themes.includes(k), label, () => toggleTheme(k), 'checkbox'))}
-            </View>
-          </Item>
           <Item label="How you want to join" hint={prefs.lat == null ? 'Set your city so nearby offline events rank higher.' : 'Used for your alerts.'} colors={colors}>
             <Segmented options={MODES} value={modeKey} onChange={(k) => update({ modes: MODE_LISTS[k] })} accessibilityLabel="How you want to join" />
           </Item>
@@ -266,7 +249,7 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title="YOUR STUDIES" colors={colors}>
-          <Item label="Degree" hint="Hackathons not open to your degree (like school-only ones) stay hidden." colors={colors} last>
+          <Item label="Degree" hint="Alerts skip hackathons not open to your degree. Filters can hide them in the Feed too." colors={colors} last>
             <View style={styles.chips}>{DEGREES.map((d) => chip(prefs.degree === d.key, d.label, () => pickDegree(d.key)))}</View>
           </Item>
         </Section>
@@ -275,7 +258,7 @@ export default function SettingsScreen() {
           <View style={styles.switches}>
             <SwitchRow
               label="New hackathon alerts"
-              hint="Ones that match your interests. At most twice a day, never 11 pm to 8 am"
+              hint="New ones that fit your settings. At most twice a day, never 11 pm to 8 am"
               value={!!(prefs.match_alerts ?? prefs.notifications)}
               onChange={setMatchAlerts}
             />
@@ -310,8 +293,6 @@ export default function SettingsScreen() {
           />
           <LinkRow icon="delete-outline" label={deleting ? 'Deleting…' : 'Delete my account'} onPress={confirmDelete} danger last colors={colors} />
         </Section>
-        {/* which version this phone runs: shows when an update has arrived */}
-        <Text style={[type.meta, styles.version, { color: colors.textSecondary }]}>{versionLine()}</Text>
       </ScrollView>
 
       <BatteryTip visible={batteryOpen} onClose={() => setBatteryOpen(false)} />
@@ -349,7 +330,6 @@ const styles = StyleSheet.create({
   cityText: { flex: 1 },
   switches: { paddingVertical: space.sm },
   alertsNote: { paddingBottom: space.sm, gap: space.xs },
-  version: { textAlign: 'center' },
   alertsAction: { alignSelf: 'flex-start' },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
   linkText: { flex: 1 },

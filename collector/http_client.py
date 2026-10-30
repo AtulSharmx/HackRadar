@@ -94,7 +94,17 @@ class Client:
         """For search APIs that only take POST (Devfolio). Same robots check, delays and block handling."""
         return self._json(url, lambda: self._post(url, body))
 
+    def get_text(self, url: str) -> str:
+        """For sources that publish HTML or RSS. Same robots check, delays and block handling."""
+        return self._send(url, lambda: self._get(url)).text
+
     def _json(self, url: str, send):
+        r = self._send(url, send)
+        if "json" not in r.headers.get("content-type", ""):
+            raise Blocked(f"non-JSON reply from {urlsplit(url).netloc} (login page or captcha?)")
+        return r.json()
+
+    def _send(self, url: str, send):
         if not self._allowed(url):
             raise Blocked(f"robots.txt disallows {url}")
         host = urlsplit(url).netloc
@@ -115,6 +125,4 @@ class Client:
                 time.sleep(RETRY_WAITS[attempt])
                 continue
             r.raise_for_status()
-            if "json" not in r.headers.get("content-type", ""):
-                raise Blocked(f"non-JSON reply from {host} (login page or captcha?)")
-            return r.json()
+            return r

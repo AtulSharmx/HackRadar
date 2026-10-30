@@ -1,10 +1,8 @@
-import Constants from 'expo-constants';
 import * as Updates from 'expo-updates';
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import { useToast } from '../components/Toast';
-import { dateTime } from './format';
 
 // EAS Update (release builds only): a new version downloads in the background; this says so and offers
 // a restart instead of waiting for the next cold start. Also checks when the app comes back to the
@@ -33,12 +31,4 @@ export function useAppUpdates() {
       duration: 10000,
     });
   }, [isUpdatePending, toast]);
-}
-
-// "Version 1.0.0 · update of Wed, 7 Oct, 1:12 am" or "Version 1.0.0 · as installed"
-export function versionLine() {
-  const v = `Version ${Constants.expoConfig?.version || '?'}`;
-  if (!Updates.isEnabled) return `${v} · development`;
-  if (Updates.isEmbeddedLaunch || !Updates.createdAt) return `${v} · as installed`;
-  return `${v} · update of ${dateTime(Updates.createdAt)}`;
 }

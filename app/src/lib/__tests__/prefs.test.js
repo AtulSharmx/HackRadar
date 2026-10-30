@@ -1,6 +1,6 @@
 jest.mock('../supabase', () => ({ supabase: {} }));
 
-import { DEFAULT_PREFS, round2, toDeviceRow } from '../prefs';
+import { DEFAULT_PREFS, round2, read, toDeviceRow } from '../prefs';
 
 test('device row: rounded location, alert filter mirrors answers, alerts follow permission', () => {
   const row = toDeviceRow({
@@ -11,7 +11,7 @@ test('device row: rounded location, alert filter mirrors answers, alerts follow 
   expect(row.lng_rounded).toBe(77.03);
   expect(row.alerts_enabled).toBe(true);
   expect(row.alert_filter).toEqual({
-    themes: ['ai_ml'], modes: ['online', 'offline', 'hybrid'], fee_max: 500, max_km: 50,
+    modes: ['online', 'offline', 'hybrid'], fee_max: 500, max_km: 50,
     closing_within_days: null, solo_only: false, exclude_warnings: true, eligible_only: true,
   });
   expect(row.prefs).not.toHaveProperty('lat');   // raw location never goes into prefs
@@ -21,4 +21,11 @@ test('device row: rounded location, alert filter mirrors answers, alerts follow 
 test('no location stays null', () => {
   expect(toDeviceRow(DEFAULT_PREFS).lat_rounded).toBeNull();
   expect(round2(null)).toBeNull();
+});
+
+test('old interests answers are dropped on open, and the devices row follows', () => {
+  const store = { 'hackradar.prefs.v1': JSON.stringify({ prefs: { themes: ['ai_ml'], modes: ['online'] }, dirty: false }) };
+  globalThis.localStorage = { getItem: (k) => store[k] ?? null };
+  expect(read()).toEqual({ prefs: { modes: ['online'] }, dirty: true });
+  delete globalThis.localStorage;
 });

@@ -77,7 +77,7 @@ export default function LocationStep() {
 
   return (
     <OnboardingStep
-      step={4}
+      step={3}
       title="Where are you?"
       subtitle="Used only to show how far offline hackathons are. Stored as your city, about 1 km accurate."
       next={{ label: 'Next', onPress: next, disabled: !draft.city }}

@@ -19,7 +19,7 @@ import {
 } from '../../lib/format';
 import { distanceKm } from '../../lib/geo';
 import { success } from '../../lib/haptics';
-import { MODE_NAMES, THEME_NAMES } from '../../lib/labels';
+import { PLATFORM_NAMES, MODE_NAMES, THEME_NAMES } from '../../lib/labels';
 import { appFor, openInApp, openStore } from '../../lib/openRegistration';
 import { usePrefs } from '../../lib/prefs';
 import { useSaved } from '../../lib/saved';
@@ -28,7 +28,6 @@ import { useSaveToggle } from '../../lib/useSaveToggle';
 import { CHROME_MAX_SCALE, layout, radius, space, type, useAppTheme } from '../../theme';
 
 const AWAY_TO_ASK = 15000; // back sooner than 15 s from the registration page: they didn't register, don't ask
-const SOURCE_NAMES = { unstop: 'Unstop', devfolio: 'Devfolio', hack2skill: 'Hack2Skill', devpost: 'Devpost', manual: 'HackRadar' };
 
 // Feed cache first (instant, offline), then my saved copy (a saved event that already left the feed),
 // then the server (links, notifications). A failed request says "can't load", never "no longer listed".
@@ -226,7 +225,7 @@ export default function EventDetail() {
 
   const checked = sources ? sources.map((s) => s.last_seen_at).filter(Boolean).sort().pop() : null;
   const listedOn = sources
-    ? joinAnd([...new Set(sources.map((s) => SOURCE_NAMES[s.source] || s.source))])
+    ? joinAnd([...new Set(sources.map((s) => PLATFORM_NAMES[s.source] || s.source))])
     : host || 'the organizer site';
 
   let applyLabel = 'Apply';
@@ -241,7 +240,7 @@ export default function EventDetail() {
           headerRight: () => (
             <View style={styles.headerActions}>
               {linkOk ? <HeaderIcon icon="share-variant-outline" label="Share" onPress={share} color={colors.textPrimary} /> : null}
-              {inPerson ? <HeaderIcon icon="map-outline" label="Open in Maps" onPress={openMaps} color={colors.textPrimary} /> : null}
+              {inPerson ? <HeaderIcon icon="map-marker-outline" label="Open in Maps" onPress={openMaps} color={colors.textPrimary} /> : null}
             </View>
           ),
         }}

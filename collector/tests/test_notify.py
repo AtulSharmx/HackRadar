@@ -161,7 +161,7 @@ def test_no_second_new_match_push_within_4_hours(monkeypatch):
     assert db.pending == [{"device_id": "p1", "event_id": "e1"}]
 
 
-def test_a_device_without_interests_gets_no_pushes(monkeypatch):
+def test_a_device_that_never_finished_setup_gets_no_pushes(monkeypatch):
     out = capture_push(monkeypatch)
     blank = {**PUSH_DEV, "prefs": {}, "alert_filter": None}                      # an empty filter matches everything
     assert notify.push_new_matches(FakeDb([CTF], devices=[blank], tokens=[TOKEN]), ["e1"], NOW) == 0 and out == []
@@ -203,3 +203,9 @@ def test_quiet_window_crosses_midnight():
         return datetime(2026, 9, 29, h, m, tzinfo=notify.IST)
     assert notify.in_quiet(at(23, 30), dev) and notify.in_quiet(at(7, 59), dev)
     assert not notify.in_quiet(at(8, 0), dev) and not notify.in_quiet(at(12, 0), dev)
+
+
+def test_a_set_up_device_with_no_themes_still_gets_pushes(monkeypatch):
+    out = capture_push(monkeypatch)
+    no_themes = {**PUSH_DEV, "prefs": {"modes": ["online", "offline", "hybrid"]}, "alert_filter": {"modes": ["online", "offline", "hybrid"]}}
+    assert notify.push_new_matches(FakeDb([CTF], devices=[no_themes], tokens=[TOKEN]), ["e1"], NOW) == 1 and len(out) == 1

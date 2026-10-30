@@ -4,6 +4,12 @@ export const THEMES = [
   ['data_science', 'Data science'], ['blockchain', 'Blockchain'], ['iot_hardware', 'IoT/Hardware'],
   ['open_innovation', 'Open innovation'], ['coding_contest', 'Coding contests'],
 ];
+// Platforms the collector reads (events.sources). "community" = submitted in the app and reviewed by us.
+export const PLATFORMS = [
+  ['unstop', 'Unstop'], ['devfolio', 'Devfolio'], ['hack2skill', 'Hack2Skill'], ['hackerearth', 'HackerEarth'],
+  ['ethglobal', 'ETHGlobal'], ['hackster', 'Hackster'], ['devpost', 'Devpost'], ['community', 'Submitted'],
+];
+export const PLATFORM_NAMES = { ...Object.fromEntries(PLATFORMS), knowafest: 'KnowAFest', manual: 'HackRadar' };
 export const THEME_NAMES = { ...Object.fromEntries(THEMES), other: 'Other' };
 export const MODE_NAMES = { online: 'Online', offline: 'Offline', hybrid: 'Hybrid' };
 

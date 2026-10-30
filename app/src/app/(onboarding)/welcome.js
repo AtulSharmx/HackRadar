@@ -22,7 +22,7 @@ export default function Welcome() {
         </Text>
       </View>
       <View style={styles.actions}>
-        <Button label="Get started" onPress={() => router.push('/interests')} />
+        <Button label="Get started" onPress={() => router.push('/join')} />
         {/* a new phone: sign in and the account's feed setup comes back, no onboarding */}
         <Button label="I already have an account" variant="text" onPress={() => router.push('/account')} />
       </View>

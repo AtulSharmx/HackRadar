@@ -31,7 +31,7 @@ export default function NotificationsStep() {
 
   return (
     <OnboardingStep
-      step={5}
+      step={4}
       title="Get told before you miss one"
       next={{ label: 'Allow notifications', onPress: allow }}
       skip={() => finish(false)}

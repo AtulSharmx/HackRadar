@@ -62,6 +62,11 @@ def dates_close(a, b) -> bool:
     return any(abs(x - y) <= DATE_WINDOW for x in da for y in db)
 
 
+def _same_deadline(a: dict, b: dict) -> bool:
+    da, db = a.get("registration_deadline"), b.get("registration_deadline")
+    return bool(da and db) and str(da)[:10] == str(db)[:10]
+
+
 def score(a: dict, b: dict) -> int:
     """0-120. Title similarity, +10 same city or both online, +10 same organizer."""
     ta, tb = norm_title(a.get("title")), norm_title(b.get("title"))
@@ -71,7 +76,9 @@ def score(a: dict, b: dict) -> int:
     ca, cb = (a.get("city") or "").lower(), (b.get("city") or "").lower()
     if (a.get("mode") == b.get("mode") == "online") or (ca and ca == cb):
         s += 10
-    elif ca and cb:   # both venues known and different: almost always two separate events
+    elif ca and cb and not (ta == tb and _same_deadline(a, b) and not (a.get("organizer") and b.get("organizer"))):
+        # both venues known and different: almost always two separate events. Not when the name and deadline
+        # match and one side names no organizer: "Soladevanahalli" and "Bengaluru" were one hackathon.
         s -= 20
     if {a.get("mode"), b.get("mode")} == {"online", "offline"}:   # one online, one in person (hybrid is compatible)
         s -= 15
