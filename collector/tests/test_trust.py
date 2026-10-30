@@ -83,8 +83,10 @@ def test_a_list_with_no_organizer_field_gets_check_details_not_a_warning():
 
 
 def test_a_source_whose_deadline_is_only_the_end_date_is_no_date_conflict():
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
     base = {"title": "Homingo", "organizer": "X", "registration_url": "https://x.io", "mode": "online", "fee_amount": 0}
-    a = {**base, "registration_deadline": "2099-11-15T18:29:00+00:00"}
-    b = {**base, "registration_deadline": "2099-12-19T18:29:00+00:00"}
+    a = {**base, "registration_deadline": (now + timedelta(days=15)).isoformat()}
+    b = {**base, "registration_deadline": (now + timedelta(days=50)).isoformat()}
     assert not [f for f in trust.red_flags(a, {"unstop": a, "devevents": b}) if f["code"] == "date_conflict"]
     assert [f for f in trust.red_flags(a, {"unstop": a, "devfolio": b}) if f["code"] == "date_conflict"]
