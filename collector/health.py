@@ -7,7 +7,7 @@ from .telegram import esc, send
 
 WINDOW_HOURS = float(os.environ.get("HEALTH_WINDOW_HOURS", "48"))
 # Small lists: days with no open event for us are normal, only errors alert
-ZERO_OK = {"hackerearth", "ethglobal", "hackster"}
+ZERO_OK = {"hackerearth", "ethglobal", "hackster", "hackindia", "reskilll"}
 
 
 def _ist(ts: str | None) -> str:

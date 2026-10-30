@@ -7,7 +7,8 @@ export const THEMES = [
 // Platforms the collector reads (events.sources). "community" = submitted in the app and reviewed by us.
 export const PLATFORMS = [
   ['unstop', 'Unstop'], ['devfolio', 'Devfolio'], ['hack2skill', 'Hack2Skill'], ['hackerearth', 'HackerEarth'],
-  ['ethglobal', 'ETHGlobal'], ['hackster', 'Hackster'], ['devpost', 'Devpost'], ['community', 'Submitted'],
+  ['hackindia', 'HackIndia'], ['reskilll', 'Reskilll'], ['ethglobal', 'ETHGlobal'], ['hackster', 'Hackster'],
+  ['devevents', 'dev.events'], ['devpost', 'Devpost'], ['community', 'Submitted'],
 ];
 export const PLATFORM_NAMES = { ...Object.fromEntries(PLATFORMS), knowafest: 'KnowAFest', manual: 'HackRadar' };
 export const THEME_NAMES = { ...Object.fromEntries(THEMES), other: 'Other' };

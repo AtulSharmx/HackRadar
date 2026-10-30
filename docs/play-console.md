@@ -53,6 +53,6 @@ Not collected: precise location (rounded on the phone), contacts, photos, files,
 ## Store listing (draft)
 
 - Short description (80 chars max): `Every hackathon open to Indian students, online or near you, in one feed.`
-- Full description: what it does (Unstop, Devfolio, Hack2Skill, HackerEarth, ETHGlobal, Hackster and reviewed submissions, every 6 hours), ranking by interests and distance, deadline reminders, alerts at most twice a day, no ads, free.
+- Full description: what it does (Unstop, Devfolio, Hack2Skill, HackerEarth, HackIndia, Reskilll, ETHGlobal, Hackster, dev.events and reviewed submissions, every 6 hours), ranking by interests and distance, deadline reminders, alerts at most twice a day, no ads, free.
 - Category: Education. Contact email: atulshxrma04@gmail.com. Privacy policy: https://hackradar.expo.app
 - Graphics needed: 512×512 icon (`app/assets/icon.png`), 1024×500 feature graphic, 2–8 phone screenshots (Feed, event detail, Saved, Profile).

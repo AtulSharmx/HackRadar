@@ -46,7 +46,7 @@ function Mine({ items, colors }) {
     <View style={styles.mine}>
       <Text style={[type.label, { color: colors.textPrimary }]}>Your submissions</Text>
       {items.map((s) => {
-        const [word, tone] = STATUS[s.status] || STATUS.pending;
+        const [word, tone] = s.status === 'pending' && new Date(s.registration_deadline) < new Date() ? ['Deadline passed', 'urgent'] : STATUS[s.status] || STATUS.pending;
         return (
           <View key={s.id} style={[styles.mineRow, { borderColor: colors.border, backgroundColor: colors.surface }]}>
             <View style={styles.mineText}>
@@ -77,7 +77,7 @@ export default function SubmitScreen() {
 
   const loadMine = useCallback(async () => {
     if (!user || isGuest) return;
-    const { data } = await supabase.from('submissions').select('id,title,status,review_note,created_at')
+    const { data } = await supabase.from('submissions').select('id,title,status,review_note,created_at,registration_deadline')
       .order('created_at', { ascending: false }).limit(20);
     setMine(data || []);
   }, [user, isGuest]);
