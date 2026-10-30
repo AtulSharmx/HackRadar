@@ -24,4 +24,5 @@ PLATFORM_HOSTS = ("devpost.com", "unstop.com", "devfolio.co", "forms.gle", "docs
                   "forms.office.com", "lu.ma", "luma.com", "typeform.com", "tally.so")
 SOCIAL_HOSTS = ("instagram.com", "wa.me", "chat.whatsapp.com", "whatsapp.com", "t.me", "linktr.ee",
                 "bit.ly", "tinyurl.com", "rb.gy", "shorturl.at", "cutt.ly")
-TRUSTED_SOURCES = ("devpost", "unstop", "devfolio", "hack2skill", "hackerearth", "ethglobal", "hackster", "community")  # community: admin-reviewed
+NO_ORGANIZER_FIELD = ("devfolio", "hack2skill", "hackerearth", "reskilll", "devevents")   # their lists never name one
+TRUSTED_SOURCES = ("devpost", "unstop", "devfolio", "hack2skill", "hackerearth", "ethglobal", "hackster", "hackindia", "reskilll", "devevents", "community")  # community: admin-reviewed

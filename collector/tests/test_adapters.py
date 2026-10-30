@@ -256,3 +256,49 @@ def test_hackster_contest_cards():
     assert (e.title, e.organizer, e.mode, e.themes) == ("Infineon Boss Battle", "Infineon", "online", ["iot_hardware"])
     assert e.registration_url == "https://www.hackster.io/contests/infineon-boss-battle" and hackster.is_relevant(e)
     assert e.registration_deadline == datetime(2099, 1, 4, 18, 29, tzinfo=timezone.utc)
+
+
+def test_hackindia_reads_the_embedded_event_list():
+    from collector.adapters import hackindia
+    events = [{"id": 53, "title": "⚖️ AI for Lawyers Hackathon", "description": "Build for law", "start_date": "2099-11-02T03:30:00.000Z",
+               "end_date": "2099-12-01T03:30:00.000Z", "location": "Online", "team_size_min": None, "team_size_max": None,
+               "prize_pool": "$$10,000 (credits)", "registration_fee": "0.00", "registration_fee_currency": "INR", "tracks": ["AI/ML"],
+               "registration_end_date": "2099-11-11T03:30:00.000Z", "is_online": True, "status": "registration_open"},
+              {"id": 7, "title": "Old One", "start_date": "2020-01-01T00:00:00.000Z", "is_online": False, "location": "Pune",
+               "registration_end_date": "2020-01-01T00:00:00.000Z", "status": "completed"}]
+    payload = json.dumps('12:[{"initialEvents":' + json.dumps(events) + "}]")
+    page = f'<a href="/2099/ai-for-lawyers-hackathon">x</a><script>self.__next_f.push([1,{payload}])</script>'
+    raws = hackindia.events_in(page)
+    e, old = hackindia.parse(raws[0]), hackindia.parse(raws[1])
+    assert e.registration_url == "https://hackindia.org/2099/ai-for-lawyers-hackathon"
+    assert (e.organizer, e.mode, e.fee_amount, e.is_paid) == ("HackIndia", "online", 0, False) and e.prize_text == "$10,000 (credits)"
+    assert e.registration_deadline == datetime(2099, 11, 11, 3, 30, tzinfo=timezone.utc) and "ai_ml" in e.themes
+    assert old.registration_url == "https://hackindia.org/hackathons"     # no such link on the page: never a guessed URL
+    assert hackindia.is_relevant(e) and not hackindia.is_relevant(old)
+
+
+def test_reskilll_cards_open_and_closed():
+    from collector.adapters import reskilll
+    card = ('<div class="col-12 col-lg-3 col-md-6 py-3 hackathonCard"><a class="allhackname eventName" href="https://reskilll.com/hack/{slug}" target="_blank">{title}</a>'
+            '<div class="d-none eventDescription">&lt;p&gt;AI build&lt;/p&gt;</div><div class="hackresgiterdate">2099-01-01</div><div class="hackresgiterdate">2099-02-01</div>{end}</div>')
+    page = card.format(slug="open", title="Pune AI Hack", end="<span>Register Now</span>") + card.format(slug="shut", title="Old Hack", end="<span>Registration Closed</span>")
+    a, b = map(reskilll.parse, reskilll.cards_in(page))
+    assert (a.source_event_id, a.city, a.is_open) == ("open", "Pune", True) and reskilll.is_relevant(a)
+    assert a.registration_deadline == datetime(2099, 2, 1, 18, 29, tzinfo=timezone.utc)
+    assert not reskilll.is_relevant(b)
+
+
+def test_devevents_keeps_online_hackathons_and_links_the_official_page():
+    from collector.adapters import devevents
+    def block(name, desc, mode="Online"):
+        return ('<script type="application/ld+json">' + json.dumps({"name": name, "description": desc, "url": f"https://dev.events/conferences/{name[:3].lower()}",
+                "eventAttendanceMode": f"https://schema.org/{mode}EventAttendanceMode", "startDate": "2099-10-01T00:00:00.000+00:00", "endDate": "2099-11-12T00:00:00.000+00:00"}) + "</script>")
+    page = block("Masterclass", "Java masterclass Online") + block("PayPal AI Hackathon", "Artificial Intelligence (AI) hackathon Online") + block("Basel", "Tech hackathon in Basel, Switzerland", "Offline")
+    raws = devevents.entries_in(page)
+    assert [r["name"] for r in raws] == ["PayPal AI Hackathon", "Basel"]                    # the course ad is not a hackathon
+    assert devevents.official_link('<a href="https://dev.events/x">a</a><a class="b" href="https://paypalaihackathon.devpost.com">b</a><a href="https://principal.dev">c</a>') == "https://paypalaihackathon.devpost.com"
+    e = devevents.parse({**raws[0], "official": "https://paypalaihackathon.devpost.com"})
+    assert (e.organizer, e.registration_url, e.mode, e.themes) == ("Devpost", "https://paypalaihackathon.devpost.com", "online", ["ai_ml"])
+    assert e.registration_deadline == datetime(2099, 11, 12, 18, 29, tzinfo=timezone.utc) and devevents.is_relevant(e)
+    assert devevents.parse({**raws[0], "official": "https://myhack.example"}).organizer is None  # unknown site: nothing guessed
+    assert not devevents.is_relevant(devevents.parse(raws[1]))

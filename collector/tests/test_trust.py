@@ -70,3 +70,13 @@ def test_label_check_details_when_key_facts_missing():
 def test_label_trusted_source():
     assert trust.label(GOOD, [], {"unstop"}, NOW) == "trusted_source"
     assert trust.label(GOOD, [], {"manual"}, NOW) == "check_details"   # not a known platform
+
+
+def test_a_list_with_no_organizer_field_gets_check_details_not_a_warning():
+    from datetime import datetime, timezone
+    row = {"title": "PromptWars", "organizer": None, "registration_url": "https://hack2skill.com/event/x", "mode": "online",
+           "fee_amount": 0, "registration_deadline": "2099-01-01T00:00:00+00:00", "status": "open"}
+    now = datetime(2026, 10, 30, tzinfo=timezone.utc)
+    assert not [f for f in trust.red_flags(row, {"hack2skill": row}) if f["code"] == "no_organizer"]
+    assert trust.label(row, [], {"hack2skill"}, now) == "check_details"
+    assert [f for f in trust.red_flags(row, {"unstop": row}) if f["code"] == "no_organizer"]   # Unstop has the field: a gap there means something

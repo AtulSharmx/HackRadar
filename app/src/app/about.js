@@ -12,7 +12,7 @@ const POINTS = [
   {
     icon: 'database-search-outline',
     title: 'Where hackathons come from',
-    text: 'Unstop, Devfolio, Hack2Skill, HackerEarth, ETHGlobal and Hackster, plus hackathons people submit (checked by us first), every 6 hours. You always register on the event’s own page.',
+    text: 'Unstop, Devfolio, Hack2Skill, HackerEarth, HackIndia, Reskilll, ETHGlobal, Hackster and dev.events, plus hackathons people submit (checked by us first), every 6 hours. You always register on the event’s own page.',
   },
   {
     icon: 'shield-check-outline',

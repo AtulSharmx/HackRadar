@@ -47,9 +47,13 @@ The owner asked for well-known platforms because 92% of open events came from Un
 | Hackster | in use | robots.txt allows /contests, Terms have no such clause; online hardware contests |
 | Hack2Skill | wider | in-person events with no city are now kept unless the title points abroad (6 were being dropped) |
 | KnowAFest | built, off | allowed and has real college hackathons, but the owner wants well-known names; `SOURCES=...,knowafest` turns it on |
-| Devpost, MLH, Devnovate, lablab.ai, Luma, TechGig, Where U Elevate, Hackathon.com | not read | their Terms forbid copying or reuse of site content; the Feed links out to the first four instead |
+| Devpost, MLH, Devnovate, lablab.ai, Luma, TechGig, Where U Elevate, Hackathon.com | not read | their Terms forbid copying or reuse of site content (Devpost re-read 30 Oct: forbids "scrape, crawl or spider"); the Feed links out to the first four instead |
 | GeeksforGeeks, HackQuest | not read | Terms forbid automated access / scraping |
 | DoraHacks | not read | answers with a human-verification page: that is a block, we stop |
-| Reskilll | not built | allowed, but no open events and not widely known |
+| HackIndia | in use | robots.txt allows the list; Terms have no clause against automated access or reuse |
+| Reskilll | in use | robots.txt allows /allhacks; no Terms published; often no open events, owner asked for it |
+| dev.events | in use | robots.txt allows all, no Terms published; online and India entries, each linked to its official page |
+| Internshala | not read | Terms: "no content may be copied" (200+ active competitions: worth asking permission) |
+| MyGov Innovate | not read | Terms forbid robots and copying |
 
 Permission from Devpost would add the most (about 70 events). Drafts: docs/outreach.md.
