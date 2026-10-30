@@ -37,7 +37,8 @@ def red_flags(row: dict, by_source: dict[str, dict]) -> list[dict]:
             and not (by_source and set(by_source) <= set(config.NO_ORGANIZER_FIELD))):
         flags.append({"code": "no_organizer", "text": "Organizer is not mentioned"})
 
-    deadlines = {s: _dt(r["registration_deadline"]) for s, r in by_source.items() if r.get("registration_deadline")}
+    deadlines = {s: _dt(r["registration_deadline"]) for s, r in by_source.items()
+                 if r.get("registration_deadline") and s not in config.DEADLINE_IS_END_DATE}
     if len(deadlines) > 1:
         (s1, d1), (s2, d2) = min(deadlines.items(), key=lambda x: x[1]), max(deadlines.items(), key=lambda x: x[1])
         if (d2 - d1).total_seconds() > config.DATE_CONFLICT_DAYS * 86400:

@@ -25,4 +25,5 @@ PLATFORM_HOSTS = ("devpost.com", "unstop.com", "devfolio.co", "forms.gle", "docs
 SOCIAL_HOSTS = ("instagram.com", "wa.me", "chat.whatsapp.com", "whatsapp.com", "t.me", "linktr.ee",
                 "bit.ly", "tinyurl.com", "rb.gy", "shorturl.at", "cutt.ly")
 NO_ORGANIZER_FIELD = ("hack2skill", "hackerearth", "reskilll", "devevents")   # their lists never name one (Devfolio has its own "verified" flag)
+DEADLINE_IS_END_DATE = ("devevents", "hackerearth")   # no registration date in their lists: disagreeing is not a conflict
 TRUSTED_SOURCES = ("devpost", "unstop", "devfolio", "hack2skill", "hackerearth", "ethglobal", "hackster", "hackindia", "reskilll", "devevents", "community")  # community: admin-reviewed
