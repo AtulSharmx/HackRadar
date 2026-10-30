@@ -302,3 +302,23 @@ def test_devevents_keeps_online_hackathons_and_links_the_official_page():
     assert e.registration_deadline == datetime(2099, 11, 12, 18, 29, tzinfo=timezone.utc) and devevents.is_relevant(e)
     assert devevents.parse({**raws[0], "official": "https://myhack.example"}).organizer is None  # unknown site: nothing guessed
     assert not devevents.is_relevant(devevents.parse(raws[1]))
+
+
+def test_fetching_through_supabase_keeps_the_query_in_the_url(monkeypatch):
+    from collector import http_client
+    sent = {}
+
+    class Reply:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return [{"status": 200, "content_type": "text/html", "body": "x"}]
+
+    monkeypatch.setattr(http_client.httpx, "post", lambda url, **k: sent.update(k["json"]) or Reply())
+    client = http_client.Client()
+    client.via_supabase = True
+    client._get("https://dev.events/hackathons?page=2")
+    assert sent["url"] == "https://dev.events/hackathons?page=2"
+    client._get("https://example.org/list", params={"page": 3})
+    assert sent["url"] == "https://example.org/list?page=3"
