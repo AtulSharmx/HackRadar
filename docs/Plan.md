@@ -179,3 +179,7 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   2 in a row from one platform, Platform filter and a platform name on every card, links out to Devpost/MLH/Devnovate/lablab.
   Goodies words matched "bottlenecks": now whole words. Feed count line and Profile version line removed (owner). The
   next native build should also take the 12 newer Expo patch versions (expo-doctor); they change the fingerprint, so OTA alone can't.
+- 30 Oct 2026, more platforms (owner named Reskilll, HackIndia, Devpost): HackIndia, Reskilll and dev.events added.
+  dev.events brings big online hackathons and links each to its official page, most on Devpost, without reading Devpost
+  (whose terms still forbid scraping). Lists with no organizer field no longer raise a false warning. Expo patch versions
+  updated (new fingerprint): installed APKs need the new build for later OTAs.

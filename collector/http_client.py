@@ -44,7 +44,7 @@ class Client:
     def _get(self, url: str, params=None):
         if not self.via_supabase:
             return self.http.get(url, params=params)
-        full = str(httpx.URL(url, params=params))
+        full = str(httpx.URL(url, params=params)) if params else url   # params=None would wipe a ?page=2 in the url
         key = config.SUPABASE_SERVICE_ROLE_KEY
         r = httpx.post(f"{config.SUPABASE_URL.rstrip('/')}/rest/v1/rpc/fetch_url", timeout=40,
                        headers={"apikey": key, "Authorization": f"Bearer {key}"},
