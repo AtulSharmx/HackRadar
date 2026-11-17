@@ -13,3 +13,10 @@ dist/
 # google-services.json is NOT secret (public identifiers, per Expo docs) and is committed.
 *firebase-adminsdk*.json
 supabase/.temp/
+
+# local agent/editor config, not part of the project
+CLAUDE.md
+AGENTS.md
+BUILD_PROMPT.md
+.claude/
+design-baseline.json
