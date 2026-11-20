@@ -1,21 +1,23 @@
 # HackRadar
 
-Every hackathon an Indian student can actually join — near them or online — in one list, with an honest
-label on each event and a reminder before it closes.
+Every hackathon an Indian student can actually join, near them or online, in one list, with an
+honest label on each event and a reminder before it closes.
 
 Hackathon-only, India-first. The Android app is in testing.
 
 ## Why this exists
 
-Finding hackathons in India is harder than it should be, for three reasons:
+Finding hackathons in India is harder than it should be.
 
-- **The biggest gap isn't on any platform.** A lot of college hackathons are promoted only through
-  Instagram posters, LinkedIn and WhatsApp groups, and they register through a Google Form. A scraper
-  never sees them.
-- **Every platform is an island.** Unstop, Devfolio, Hack2Skill, Devpost and the rest each show only
-  their own events, and Unstop mixes hackathons in with jobs, quizzes and esports.
-- **Trust is a real problem.** "Pay Rs 500-2,000 to register" scams target students, and nobody labels
-  them.
+The biggest gap is not on any platform at all. A lot of college hackathons are promoted only
+through Instagram posters, LinkedIn and WhatsApp groups, and they take registrations through a
+Google Form. A scraper never sees them.
+
+The ones that are listed are scattered. Unstop, Devfolio, Hack2Skill, Devpost and the rest each
+show only their own events, and Unstop mixes hackathons in with jobs, quizzes and esports.
+
+Then there is trust. "Pay Rs 500 to 2,000 to register" scams target students, and nobody labels
+them.
 
 So HackRadar collects from every source it can reach, lets students and organisers submit the events no
 scraper sees, and puts a trust label and a match score on each one.
@@ -25,7 +27,7 @@ scraper sees, and puts a trust label and a match score on each one.
 | Folder | What it is |
 |---|---|
 | `collector/` | Python pipeline: fetches 11 sources, cleans, dedupes, scores, writes to Supabase |
-| `app/` | The Android app — Expo SDK 57 with expo-router, Supabase auth and Google Sign-In |
+| `app/` | The Android app. Expo SDK 57 with expo-router, Supabase auth and Google Sign-In |
 | `supabase/` | Postgres schema and row-level security, as seven migrations |
 | `shared/` | Data the collector and the app must agree on: cities, constants, match test cases |
 | `site/` | The landing page |
