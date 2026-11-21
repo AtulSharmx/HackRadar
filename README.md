@@ -5,6 +5,8 @@ honest label on each event and a reminder before it closes.
 
 Hackathon-only, India-first. The Android app is in testing.
 
+**[Download the Android app (APK)](https://github.com/AtulSharmx/HackRadar/releases/latest)**
+
 ## Why this exists
 
 Finding hackathons in India is harder than it should be.
