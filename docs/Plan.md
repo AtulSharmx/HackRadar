@@ -66,7 +66,7 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
     them to Past).
   - Check: a test event 25 h away rings the 24 h reminder with the phone locked (Samsung, battery optimisation on and off).
 - [ ] B3 Push: push_tokens table + RLS, register the token, collector sends new-match and saved-change pushes via Expo, receipts next run.
-  - 1 Oct: built (spec docs/superpowers/specs/2026-10-01-b3-push-design.md). Migration 0014 applied
+  - 1 Oct: built (spec docs/design/specs/2026-10-01-b3-push-design.md). Migration 0014 applied
     (push_tokens, register_push_token, push_tickets.token); rls_check 19/19. collector/push.py (send,
     receipts, dead tokens), notify.py push: grouped new-match push, quiet hours via pending_digest, 4 h
     guard, change pushes. App: token registration, two Profile switches, tap routing, Feed "From

@@ -1,6 +1,6 @@
 """Alerts: new matching events + changes to saved events.
 
-Push (B3, docs/superpowers/specs/2026-10-01-b3-push-design.md): devices with alerts on and a token in
+Push (B3, docs/design/specs/2026-10-01-b3-push-design.md): devices with alerts on and a token in
 push_tokens. New matches go out grouped, never in the device's quiet hours and never within 4 h of the
 last one (they wait in pending_digest), so the 6-hourly run gives at most 2 a day.
 Telegram: only the admin's own row marked prefs.telegram = true (B5 removes these match alerts).

@@ -1,4 +1,4 @@
--- 0014_push_tokens.sql: B3 push notifications (docs/superpowers/specs/2026-10-01-b3-push-design.md).
+-- 0014_push_tokens.sql: B3 push notifications (docs/design/specs/2026-10-01-b3-push-design.md).
 
 -- One row per phone: an account signed in on two phones has two tokens. devices.expo_push_token (0001)
 -- held only one and stays unused.
