@@ -22,7 +22,7 @@ URL = f"{BASE}/hackathons"
 MAX_PAGES = 5
 HOSTS = {"devpost.com": "Devpost", "devfolio.co": "Devfolio", "lablab.ai": "lablab.ai", "dorahacks.io": "DoraHacks",
          "hackerearth.com": "HackerEarth", "hack2skill.com": "Hack2Skill", "unstop.com": "Unstop"}
-_ELSEWHERE = re.compile(r"(north america|latin america|latam|europe|africa|usa|canada)", re.I)   # regional, not for India
+_ELSEWHERE = re.compile(r"\b(north america|latin america|latam|europe|africa|usa|canada)\b", re.I)   # regional, not for India
 _LD = re.compile(r'<script[^>]*application/ld\+json[^>]*>([\s\S]*?)</script>')
 _OFFICIAL = re.compile(r'<a [^>]*href="(https://[^"]+)"')
 _NOT_OFFICIAL = ("dev.events", "principal.dev")   # the directory itself, and the course it advertises on every page

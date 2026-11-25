@@ -40,11 +40,17 @@ scraper sees, and puts a trust label and a match score on each one.
 One run is `python -m collector.main`. Every adapter fetches and parses in isolation, so a single broken
 source can't take the run down; everything is deduped and saved together at the end.
 
+GitHub Actions runs it every 3 hours, at :17 India time (:47 UTC). The heavy sources, ETHGlobal and
+dev.events, are fetched only every 6 hours; a run started by hand fetches everything.
+
 ```
 adapters (11 sources) -> normalize -> quality gate -> dedupe -> sync (Supabase)
                                                                    |
-                                                       match -> notify (push / Telegram)
+                                                       match -> notify (push)
 ```
+
+Telegram is only for me, the admin: alerts when something breaks, new submissions and reports, and a daily
+report at 9 am. Users get pushes in the app, never Telegram.
 
 | Stage | File | What it does |
 |---|---|---|
@@ -54,8 +60,9 @@ adapters (11 sources) -> normalize -> quality gate -> dedupe -> sync (Supabase)
 | Merge | `dedupe.py` | Finds the same event across sources and merges the rows |
 | Save | `sync.py` | Matches known links, dedupes the new ones, upserts into Supabase |
 | Score | `match.py` | Alert filters and the match score. The app implements the same rules in JS, and both have to pass `shared/match_cases.json` |
-| Alert | `notify.py`, `push.py` | New matching events, and changes to events someone saved |
-| Watch | `health.py` | Warns when a source returns zero events, or only errors, across a whole window |
+| Alert | `notify.py`, `push.py` | Pushes for new matching events, and for changes to events someone saved |
+| Watch | `health.py` | Warns on Telegram when a source returns zero events, or only errors, across a whole window |
+| Report | `daily.py` | The 9 am Telegram report: runs, open events per platform, pushes, devices, the review queue |
 
 `community.py` handles the other half of the supply: hackathons people submit inside the app, and reports
 that an event's information is wrong.
@@ -70,7 +77,8 @@ python -m collector.main
 
 It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. `HACKRADAR_CONTACT` is sent in the User-Agent so
 sources have a way to reach me, and `MAX_DETAILS_PER_RUN` (default 60) caps how many detail pages a single
-run will open.
+run will open. Without `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`, Telegram messages are printed instead.
+The GitHub Actions secrets and the first run are in `docs/setup-actions-secrets.md`.
 
 ## Running the app
 

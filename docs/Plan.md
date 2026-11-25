@@ -2,7 +2,7 @@
 
 Replaces "Implementation Plan HackRadar" (v1; kept in git history). Built so far: collector with Unstop,
 dedupe, change tracking, trust labels, geocoding, health and Telegram alerts, running on GitHub every
-6 h through Supabase; the app through onboarding, feed, filters, detail and Saved.
+hour through Supabase (every 6 h until P0, 25 Nov); the app through onboarding, feed, filters, detail and Saved.
 
 Rule: one step at a time, each ends with its Check passing. Tick it here when done.
 
@@ -75,6 +75,8 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   - Check: a new matching event reaches the phone as a push; tapping opens the right screen.
 - [ ] B4 Quiet hours and daily digest option.
 - [ ] B5 Telegram keeps only admin alerts.
+  - 25 Nov: built in P0 (log below). Telegram now carries only alerts, new submissions and reports, and the
+    9 am daily report. The owner's match feed and saved-change messages are gone; users get those as pushes.
 
 ## C. Community supply (the part no other app has)
 
@@ -183,3 +185,15 @@ Rule: one step at a time, each ends with its Check passing. Tick it here when do
   dev.events brings big online hackathons and links each to its official page, most on Devpost, without reading Devpost
   (whose terms still forbid scraping). Lists with no organizer field no longer raise a false warning. Expo patch versions
   updated (new fingerprint): installed APKs need the new build for later OTAs.
+- 25 Nov 2026, P0 "make the data flow, make silence loud" (research plan of 24 Nov, section 8; collector only):
+  - Runs every 3 h at :47 UTC (:17 IST); hourly once Supabase egress is measured (free plan). ETHGlobal and dev.events (about 45 detail pages a run) only every 6 h; a run
+    started by hand fetches everything. A skipped source counts as down: its events aren't changed or counted missing.
+  - Stale rule for hourly runs (0022): unseen 12 h and missed in 3 runs of its source, or unseen 3 days as before.
+    A run that would stale more than 30% of open events stales none and sends Telegram A10 "Data blow-up".
+  - Telegram is admin-only (B5). Every notify step has its own try, so a Telegram outage can't stop users' pushes.
+    Health alerts go once, then at most every 6 h. A daily report from the 09:17 IST run ends with "Sab theek" or the issues.
+  - Data: dev.events' regex had 0x08 bytes where \b was meant (US events got in); Reskilll off (0 open of 173); the
+    quality gate also drops CP and coding contests (A2 had kept them), design and merch challenges, bootcamps, meetups
+    and pop-ups, webinars and bug bounties unless the title names a hackathon, and trading always.
+  - Owner steps: docs/setup-actions-secrets.md (5 Actions secrets, migration 0022 before merging, a run by hand,
+    the 9 am report).

@@ -2,7 +2,9 @@ name: collect
 
 on:
   schedule:
-    - cron: "23 */6 * * *"   # every 6 h at :23 UTC (top of the hour is GitHub's busiest slot)
+    - cron: "47 */3 * * *"   # every 3 h at :47 UTC = :17 IST, so 09:17 IST gets a run (the top of the hour is
+                              # GitHub's busiest slot). Not hourly: Supabase free plan egress (docs/TRD.md, limits).
+                              # Heavy sources only every 6 h: due() in collector/main.py
   workflow_dispatch:          # "Run workflow" button, also from the GitHub mobile app
 
 concurrency:
@@ -35,7 +37,7 @@ jobs:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           # Sources block GitHub's IPs; pages are fetched through Supabase (migration 0006_fetch_url)
           FETCH_VIA: supabase
-          SOURCES: unstop,devfolio,hack2skill,hackerearth,ethglobal,hackster,hackindia,reskilll,devevents
+          SOURCES: unstop,devfolio,hack2skill,hackerearth,ethglobal,hackster,hackindia,devevents
       - name: Alert on failure
         if: failure()
         env:

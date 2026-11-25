@@ -222,7 +222,7 @@ Meaning of tricky fields:
 - registration\_deadline: stored in UTC; a date with no time means 23:59 IST that day.
 - lat and lng on events: venue location. location\_approximate = true when it is the city centre.
 - lat\_rounded and lng\_rounded on devices: rounded to 2 decimals (about 1 km). Never store raw GPS.
-- status: open (deadline in future or unknown), closed (deadline passed), stale (missing from sources for 3 runs).
+- status: open (deadline in future or unknown), closed (deadline passed), stale (no source has seen it for 12 h and 3 runs, or for 3 days; migration 0022).
 - fingerprint: SHA-256 of the tracked change fields, joined in a fixed order.
 
 prefs (devices.prefs) shape:
@@ -345,7 +345,8 @@ on conflict (source, source_event_id) do update
       last_seen_at = now();
 ```
 
-3. End of each run: close passed deadlines and mark missing events stale:
+3. End of each run: close passed deadlines and mark missing events stale (a sketch; the live rule, with
+   the 12 h condition and the 30% brake, is `end_of_run` in migration 0022):
 
 ```sql
 update events set status = 'closed'

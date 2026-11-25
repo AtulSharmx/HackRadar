@@ -2,17 +2,27 @@
 
 Run with:  python -m collector.main
 """
+import os
 import re
 import sys
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from . import community, config, geocode, health, notify, push, quality
-from .adapters import ADAPTERS
+from . import community, config, daily, geocode, health, notify, push, quality
+from .adapters import ADAPTERS, HEAVY
 from .db import Db
 from .http_client import Client
 from .sync import sync
+
+
+def due(adapters, now: datetime, event: str | None) -> list:
+    """Scheduled runs fetch the heavy sources only every 6 h; a run started by hand fetches everything.
+    A skipped source isn't in ok_sources, so end_of_run doesn't count its events as missing."""
+    # the hour the run was scheduled for: collect.yml fires at :47 UTC and GitHub often starts it late
+    if event != "schedule" or (now - timedelta(minutes=47)).hour % 6 == 0:
+        return list(adapters)
+    return [a for a in adapters if a.name not in HEAVY]
 
 
 def valid(e) -> bool:
@@ -66,10 +76,15 @@ def hide_excluded(db, stats):
 
 
 def main() -> int:
-    run_started = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
+    run_started = now.isoformat()
     db, client = Db(), Client()
     all_events, stats = [], {}
-    for a in ADAPTERS:
+    adapters = due(ADAPTERS, now, os.environ.get("GITHUB_EVENT_NAME"))   # GitHub Actions sets it: schedule / workflow_dispatch
+    skipped = {a.name for a in ADAPTERS if a not in adapters}
+    if skipped:
+        print(f"skipped this hour (every 6 h): {', '.join(sorted(skipped))}")
+    for a in adapters:
         events, stats[a.name] = collect(a, client)
         if events and hasattr(a, "enrich"):
             try:   # details are extra: a failure here must not drop the source's events
@@ -86,7 +101,8 @@ def main() -> int:
         print(f"community: {len(submitted)} approved submissions open")
     except Exception:
         traceback.print_exc()
-    new, n_changes, new_ids = sync(db, all_events, down={n for n, s in stats.items() if not s['ok']})
+    # a skipped source counts as down: merging an event's other sources alone would flip its values every hour
+    new, n_changes, new_ids = sync(db, all_events, down=skipped | {n for n, s in stats.items() if not s['ok']})
     for name, s in stats.items():
         db.log_run(name, s["found"], new.get(name, 0), s["ms"], s["error"])
         print(f"{name}: fetched {s['fetched']}, kept {s['found']}, new {new.get(name, 0)}"
@@ -96,7 +112,9 @@ def main() -> int:
     hide_excluded(db, stats)
     ok = [name for name, s in stats.items() if s["ok"]]
     end = db.rpc("end_of_run", ok_sources=ok, run_started=run_started)[0]
-    print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}")
+    blocked = end.get("stale_blocked") or 0   # migration 0022's safety brake; the key is missing before it
+    print(f"changes recorded: {n_changes}, closed: {end['closed_count']}, stale: {end['stale_count']}"
+          + (f", kept open by the 30% brake: {blocked}" if blocked else ""))
     try:   # geocoding is best effort: Nominatim being down must not fail the run
         print(f"geocode: {geocode.run(db)}")
     except Exception:
@@ -106,17 +124,28 @@ def main() -> int:
     except Exception:
         traceback.print_exc()
     try:   # after geocoding, so new offline events already have a distance
-        print(f"telegram: {notify.new_matches(db, new_ids)} new matches")
         print(f"push: {notify.push_new_matches(db, new_ids)} new-match pushes")
-        print(f"saved-event change alerts: {notify.saved_changes(db)}")
+    except Exception:
+        traceback.print_exc()
+    try:   # its own try: a failure above must not stop the saved-event change pushes
+        print(f"saved-event change pushes: {notify.saved_changes(db)}")
     except Exception:
         traceback.print_exc()
     try:   # new submissions and reports to the admin's Telegram
         print(f"admin queue: {community.admin_queue(db)} items")
     except Exception:
         traceback.print_exc()
+    try:   # A10: the brake already kept the events open, so a failed alert must not fail the run
+        if blocked:
+            print(f"data blow-up alert sent: {health.blowup_alert(db, blocked)}")
+    except Exception:
+        traceback.print_exc()
     try:   # a broken health check must not fail an otherwise good run
         print(f"health alerts sent: {health.check_and_alert(db, [a.name for a in ADAPTERS])}")
+    except Exception:
+        traceback.print_exc()
+    try:   # last, on its own: the 9 am report must not touch the steps above, nor fail the run
+        print(f"daily report sent: {daily.send_if_due(db, now, sum(sum(s['excluded'].values()) for s in stats.values()))}")
     except Exception:
         traceback.print_exc()
     return 1 if all(s["found"] == 0 and s["error"] for s in stats.values()) else 0

@@ -288,6 +288,14 @@ def test_reskilll_cards_open_and_closed():
     assert not reskilll.is_relevant(b)
 
 
+def test_reskilll_is_not_collected_but_old_rows_still_render():
+    from collector import config
+    workflow = (Path(__file__).parents[2] / ".github" / "workflows" / "collect.yml").read_text(encoding="utf-8")
+    sources = next(line for line in workflow.splitlines() if line.strip().startswith("SOURCES:")).split(":", 1)[1]
+    assert "unstop" in sources and "reskilll" not in sources   # 0 open of 173 on 24 Nov 2026
+    assert "reskilll" in config.TRUSTED_SOURCES
+
+
 def test_devevents_keeps_online_hackathons_and_links_the_official_page():
     from collector.adapters import devevents
     def block(name, desc, mode="Online"):
@@ -302,6 +310,18 @@ def test_devevents_keeps_online_hackathons_and_links_the_official_page():
     assert e.registration_deadline == datetime(2099, 11, 12, 18, 29, tzinfo=timezone.utc) and devevents.is_relevant(e)
     assert devevents.parse({**raws[0], "official": "https://myhack.example"}).organizer is None  # unknown site: nothing guessed
     assert not devevents.is_relevant(devevents.parse(raws[1]))
+
+
+def test_devevents_drops_regional_editions_abroad():
+    from collector.adapters import devevents
+    def ev(title, about="AI hackathon Online", mode="Online"):
+        return devevents.parse({"name": title, "description": about, "url": "https://dev.events/hackathons/x",
+                                "eventAttendanceMode": f"https://schema.org/{mode}EventAttendanceMode", "endDate": "2099-11-12T00:00:00.000+00:00"})
+    assert not devevents.is_relevant(ev("AI Builders Challenge – North America"))   # real dev.events title, listed as online
+    assert not devevents.is_relevant(ev("Hack the Valley USA"))
+    assert devevents.is_relevant(ev("Codegeist 2026: Build with context. Ship with confidence."))
+    assert devevents.is_relevant(ev("Inceptrix 3.0", "Tech hackathon in Bengaluru, India", "Offline"))
+    assert devevents.is_relevant(ev("Medusa Hackathon"))   # "usa" inside a word is not the USA
 
 
 def test_fetching_through_supabase_keeps_the_query_in_the_url(monkeypatch):

@@ -51,7 +51,7 @@ The owner asked for well-known platforms because 92% of open events came from Un
 | GeeksforGeeks, HackQuest | not read | Terms forbid automated access / scraping |
 | DoraHacks | not read | answers with a human-verification page: that is a block, we stop |
 | HackIndia | in use | robots.txt allows the list; Terms have no clause against automated access or reuse |
-| Reskilll | in use | robots.txt allows /allhacks; no Terms published; often no open events, owner asked for it |
+| Reskilll | built, off | robots.txt allows /allhacks; no Terms published. Off since 24 Nov 2026: 0 open of 173 cards; `SOURCES=...,reskilll` turns it on |
 | dev.events | in use | robots.txt allows all, no Terms published; online and India entries, each linked to its official page |
 | Internshala | not read | Terms: "no content may be copied" (200+ active competitions: worth asking permission) |
 | MyGov Innovate | not read | Terms forbid robots and copying |

@@ -1,4 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+import httpx
 
 from collector import notify
 
@@ -39,7 +41,7 @@ class FakeDb:
             return self.tokens
         if table == "pending_digest":
             return self.pending
-        if table == "push_tickets":   # the 4 h guard asks for recent new_match tickets
+        if table == "push_tickets":   # the GAP guard asks for recent new_match tickets
             since = datetime.fromisoformat(p["sent_at"][4:])
             return [t for t in self.tickets if t["kind"] == "new_match" and datetime.fromisoformat(t["sent_at"]) >= since]
 
@@ -62,58 +64,49 @@ class FakeDb:
         return OK
 
 
-def capture(monkeypatch):
-    sent = []
-    monkeypatch.setattr(notify, "send", lambda text: sent.append(text) or True)
-    return sent
-
-
-def test_new_match_message_is_built_from_the_event(monkeypatch):
-    sent = capture(monkeypatch)
-    assert notify.new_matches(FakeDb([CTF, FAR]), ["e1", "e2"], NOW) == 1   # Mumbai is > 50 km
-    msg = sent[0]
-    assert msg.startswith("🆕 <b>1 new hackathon for you</b>")
-    assert "<b>ReConCTF'26</b>" in msg and "Online · Free · ₹50,000 in prizes" in msg
-    assert "Closes 4 Oct, 11:59 PM (5 days left)" in msg and "By IIT Delhi" in msg
-    assert "Matches Cybersecurity" in msg
-    assert 'href="https://unstop.com/x?a=1&amp;b=2"' in msg        # URL is HTML-escaped
-    assert "Mumbai" not in msg
-
-
-def test_nothing_new_sends_nothing(monkeypatch):
-    sent = capture(monkeypatch)
-    assert notify.new_matches(FakeDb([CTF]), [], NOW) == 0 and sent == []
-
-
-def test_saved_deadline_change_alert_then_never_again(monkeypatch):
-    sent = capture(monkeypatch)
-    change = {"id": 15, "event_id": "e1", "changed_fields": ["registration_deadline"], "notified": False,
-              "old_values": {"registration_deadline": "2026-10-20T18:29:00+00:00"},
-              "new_values": {"registration_deadline": "2026-10-05T12:59:00+00:00"}}
-    db = FakeDb([CTF], [change], [{"device_id": "d1", "event_id": "e1"}])
-    assert notify.saved_changes(db, NOW) == 1
-    assert "Deadline: 20 Oct, 11:59 PM → 5 Oct, 6:29 PM" in sent[0]
-    assert notify.saved_changes(db, NOW) == 0 and len(sent) == 1           # marked notified, no repeat
-
-
-def test_change_to_unsaved_event_is_marked_handled_silently(monkeypatch):
-    sent = capture(monkeypatch)
-    change = {"id": 16, "event_id": "e1", "changed_fields": ["registration_deadline"], "notified": False,
-              "old_values": {}, "new_values": {}}
-    db = FakeDb([CTF], [change], saved=[])
-    assert notify.saved_changes(db, NOW) == 0 and sent == [] and db.patched == ["in.(16)"]
-
-
 # ---- push (B3) ----
 PUSH_DEV = {**DEV, "id": "p1", "quiet_start_min": 1380, "quiet_end_min": 480}
 TOKEN = {"expo_push_token": "ExponentPushToken[abc]", "user_id": "p1"}
 NIGHT = datetime(2026, 9, 29, 20, 0, tzinfo=timezone.utc)   # 1:30 am IST
+DEADLINE_CHANGE = {"id": 15, "event_id": "e1", "changed_fields": ["registration_deadline"], "notified": False,
+                   "old_values": {"registration_deadline": "2026-10-20T18:29:00+00:00"},
+                   "new_values": {"registration_deadline": "2026-10-05T12:59:00+00:00"}}
 
 
 def capture_push(monkeypatch):
     out = []
     monkeypatch.setattr(notify.push, "deliver", lambda db, outgoing: out.extend(outgoing) or len(outgoing))
     return out
+
+
+def test_matches_and_saved_changes_never_go_to_telegram(monkeypatch):
+    """Telegram is the admin's console (plan 7.2): users hear about matches and changes by push only,
+    even the owner's old Telegram-marked row (DEV, no phone)."""
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test")   # configured, so any message would really go out
+    monkeypatch.setenv("TELEGRAM_CHAT_ID", "1")
+    telegram = []
+    monkeypatch.setattr(httpx, "post", lambda url, **kwargs: telegram.append(url) or type("R", (), {"status_code": 200})())
+    out = capture_push(monkeypatch)
+    saved = [{"device_id": "d1", "event_id": "e1"}, {"device_id": "p1", "event_id": "e1"}]
+    db = FakeDb([CTF], [dict(DEADLINE_CHANGE)], saved, devices=[DEV, PUSH_DEV], tokens=[TOKEN])
+    assert notify.push_new_matches(db, ["e1"], NOW) == 1 and notify.saved_changes(db, NOW) == 1
+    assert telegram == [] and [kind for _, kind, _ in out] == ["new_match", "change"]
+    assert not hasattr(notify, "new_matches")
+
+
+def test_saved_change_is_pushed_once_then_never_again(monkeypatch):
+    out = capture_push(monkeypatch)
+    db = FakeDb([CTF], [dict(DEADLINE_CHANGE)], [{"device_id": "p1", "event_id": "e1"}], devices=[PUSH_DEV], tokens=[TOKEN])
+    assert notify.saved_changes(db, NOW) == 1
+    assert notify.saved_changes(db, NOW) == 0 and len(out) == 1               # marked notified, no repeat
+
+
+def test_change_to_unsaved_event_is_marked_handled_silently(monkeypatch):
+    out = capture_push(monkeypatch)
+    change = {"id": 16, "event_id": "e1", "changed_fields": ["registration_deadline"], "notified": False,
+              "old_values": {}, "new_values": {}}
+    db = FakeDb([CTF], [change], saved=[], devices=[PUSH_DEV], tokens=[TOKEN])
+    assert notify.saved_changes(db, NOW) == 0 and out == [] and db.patched == ["in.(16)"]
 
 
 def ev(i, title, **kw):
@@ -161,6 +154,21 @@ def test_no_second_new_match_push_within_4_hours(monkeypatch):
     assert db.pending == [{"device_id": "p1", "event_id": "e1"}]
 
 
+def test_hourly_runs_push_new_matches_at_most_twice_a_day(monkeypatch):
+    """B3 decided at most 2 a day and the store listing promises it: 24 hourly runs, each with a new match,
+    push only at 08:17 (end of quiet hours) and 17:17 IST (16:17 is exactly 8 h, still inside the gap).
+    A 6 h gap would send a third, at 22:17."""
+    monkeypatch.setattr(notify.push, "deliver", lambda db, outgoing: db.tickets.extend(
+        {"device_id": d, "kind": k, "sent_at": now.isoformat()} for d, k, _ in outgoing) or len(outgoing))
+    db = FakeDb([ev(f"h{i}", f"Hack {i}") for i in range(24)], devices=[PUSH_DEV], tokens=[TOKEN])
+    sent = []
+    for i in range(24):
+        now = datetime(2026, 9, 28, 18, 47, tzinfo=timezone.utc) + timedelta(hours=i)   # 00:17 to 23:17 IST
+        if notify.push_new_matches(db, [f"h{i}"], now):
+            sent.append(f"{now.astimezone(notify.IST):%H:%M}")
+    assert sent == ["08:17", "17:17"]
+
+
 def test_a_device_that_never_finished_setup_gets_no_pushes(monkeypatch):
     out = capture_push(monkeypatch)
     blank = {**PUSH_DEV, "prefs": {}, "alert_filter": None}                      # an empty filter matches everything
@@ -169,7 +177,6 @@ def test_a_device_that_never_finished_setup_gets_no_pushes(monkeypatch):
 
 def test_saved_deadline_change_push(monkeypatch):
     out = capture_push(monkeypatch)
-    capture(monkeypatch)   # the fake ignores the Telegram row filter; keep that message out of the way
     change = {"id": 21, "event_id": "e1", "changed_fields": ["registration_deadline", "prize_text"], "notified": False,
               "old_values": {"registration_deadline": "2026-10-20T18:29:00+00:00"},
               "new_values": {"registration_deadline": "2026-10-05T12:59:00+00:00"}}
