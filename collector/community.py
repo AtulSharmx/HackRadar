@@ -12,7 +12,7 @@ from .normalize import classify_themes, clean_city, parse_money
 from .telegram import esc, esc_attr, send
 
 name = "community"
-EDITOR = "https://supabase.com/dashboard/project/vbsgcjfrlmouzaocyfts/editor"
+EDITOR = "https://supabase.com/dashboard/project/nxnvgrfgdevrmdklzyfy/editor"
 REASONS = {"wrong_dates": "wrong dates", "wrong_place": "wrong venue/mode", "closed": "already closed",
            "fake": "fake / scam", "duplicate": "duplicate", "other": "other"}
 
