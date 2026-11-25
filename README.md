@@ -5,7 +5,7 @@ honest label on each event and a reminder before it closes.
 
 Hackathon-only, India-first. The Android app is in testing.
 
-**[Download the Android app (APK)](https://github.com/AtulSharmx/HackRadar/releases/latest)**
+**[Download the Android app (APK)](https://github.com/AtulSharmx/HackRadar/releases/latest)** · [What's new](CHANGELOG.md)
 
 ## Why this exists
 
@@ -28,9 +28,9 @@ scraper sees, and puts a trust label and a match score on each one.
 
 | Folder | What it is |
 |---|---|
-| `collector/` | Python pipeline: fetches 11 sources, cleans, dedupes, scores, writes to Supabase |
+| `collector/` | Python pipeline: reads 8 sources, cleans, dedupes, scores, writes to Supabase |
 | `app/` | The Android app. Expo SDK 57 with expo-router, Supabase auth and Google Sign-In |
-| `supabase/` | Postgres schema and row-level security, as seven migrations |
+| `supabase/` | Postgres schema and row-level security, as 22 migrations |
 | `shared/` | Data the collector and the app must agree on: cities, constants, match test cases |
 | `site/` | The landing page |
 | `docs/` | PRD, TRD, backend schema, app flow, design brief and the launch plans |
@@ -44,7 +44,7 @@ GitHub Actions runs it every 3 hours, at :17 India time (:47 UTC). The heavy sou
 dev.events, are fetched only every 6 hours; a run started by hand fetches everything.
 
 ```
-adapters (11 sources) -> normalize -> quality gate -> dedupe -> sync (Supabase)
+adapters (8 sources) -> normalize -> quality gate -> dedupe -> sync (Supabase)
                                                                    |
                                                        match -> notify (push)
 ```
@@ -54,7 +54,7 @@ report at 9 am. Users get pushes in the app, never Telegram.
 
 | Stage | File | What it does |
 |---|---|---|
-| Fetch | `adapters/` | Devfolio, Devpost, Unstop, HackerEarth, Hack2Skill, ETHGlobal, Hackster, KnowAFest, Reskilll, HackIndia, DevEvents |
+| Fetch | `adapters/` | Unstop, Devfolio, Hack2Skill, HackerEarth, HackIndia, dev.events, ETHGlobal, Hackster. Devpost (its Terms forbid automated collection), KnowAFest and Reskilll have adapters but are off |
 | Clean | `normalize.py` | Turns messy source text into real values: dates, money, mode, city, themes |
 | Filter | `quality.py` | Keeps hackathons out of non-hackathon noise, and flags dates that can't be right |
 | Merge | `dedupe.py` | Finds the same event across sources and merges the rows |
@@ -90,5 +90,6 @@ npx expo start
 
 ## Status
 
-The collector runs and fills the database. The Android app is in testing. HackRadar is my own idea and my
-own build, and I want to launch it properly once the budget allows.
+The collector runs every 3 hours and fills the database (about 250 open hackathons on 25 Nov 2026). The
+Android app is in testing; the plan for what comes next is in `docs/research/2026-11-24-hackradar-plan.md`.
+HackRadar is my own idea and my own build, and I want to launch it properly once the budget allows.
