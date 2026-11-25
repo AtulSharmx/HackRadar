@@ -5,9 +5,15 @@ Built from the 232 open Unstop events on 29 Sep 2026:
   unreliable ("Quizzes & Treasure Hunt" sits on NASA Space Apps and a CTF), so both are ignored.
 - Hackathon names vary too much to require a keyword (Vibeathon, Code Yudh, Startupathon).
 So an event stays unless its title clearly names something that isn't a hackathon.
+Plan P0 (live Unstop and Hack2Skill, 24 Nov 2026) added CP contests, design and merch, bootcamps, meetups,
+webinars, bug bounties and trading: about 12-16% of Unstop was these.
 """
 import re
 from datetime import datetime, timedelta, timezone
+
+# A title that also names a hackathon ("Bootcamp & Hackathon", "Buildathon", "HackFest") isn't clearly something else;
+# "Hacking" and "Hacker" don't count
+_UNLESS_HACKATHON = r"^(?!.*(athons?\b|hack(?!ing|er))).*"
 
 # (reason, pattern) checked against the title. Word boundaries keep "Game Jam" and "Pokerbots" in.
 NOT_HACKATHON = [
@@ -17,6 +23,13 @@ NOT_HACKATHON = [
     ("business", r"\b(business plan|b-?plan|case study|marketing (challenge|competition))\b"),
     ("robot race", r"\b(robo[ -]?(race|sumo|soccer|war|wars|maze)|line follower|drone race|uav competition)\b"),
     ("esports", r"\btournament\b(?!.*\bhack)"),   # "... Tournament" unless it's a hacking tournament
+    ("coding contest", _UNLESS_HACKATHON + r"\b(competitive programming|(cp|coding|programming) (contest|competition)s?)\b"),
+    ("design", _UNLESS_HACKATHON + r"\b(merch(andise)?|watch ?face|(logo|t-?shirt|graphic|ui ?/? ?ux) design)\b"),
+    ("bootcamp", _UNLESS_HACKATHON + r"\bboot ?camps?\b"),
+    ("meetup", _UNLESS_HACKATHON + r"\b(meet[ -]?ups?|pop[ -]?ups?|meet the builders)\b"),
+    ("webinar", _UNLESS_HACKATHON + r"\bwebinars?\b"),
+    ("bug bounty", _UNLESS_HACKATHON + r"\bbug bount(y|ies)\b"),
+    ("trading", r"\btrading\b"),   # no hackathon exception: "Crypto Trading Hackathon" is a trading contest
 ]
 _NOT = [(reason, re.compile(p, re.I)) for reason, p in NOT_HACKATHON]
 

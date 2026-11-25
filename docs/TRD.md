@@ -10,16 +10,16 @@ Describes what is built today and what gets built next. Product decisions live i
             │  (public JSON, allowed)                          │ app, RLS: own rows only
             ▼                                                  ▼
  GitHub Actions: collector (Python) ──fetch_url()──▶ Supabase Postgres ◀── Android app (Expo)
-   every 6 h · adapters · normalize · dedupe ·          events, sources, changes,    guest sign-in,
+   every 3 h · adapters · normalize · dedupe ·          events, sources, changes,    guest sign-in,
    trust · geocode · changes · submissions ·           devices, saved, submissions,  feed cache,
    alerts · health                                      reports, push tokens          reminders
             │                                                  │
             ▼                                                  ▼
-   Telegram (admin: health, weekly quality,         Expo push → FCM → phones
+   Telegram (admin only: health, daily report,      Expo push → FCM → phones
    moderation queue)                                (new matches, saved-event changes)
 ```
 
-- **Collector** runs on GitHub Actions (free, private repo). Sources block GitHub's IPs, so page
+- **Collector** runs on GitHub Actions (free, public repo). Sources block GitHub's IPs, so page
   fetches go through the database function `fetch_url` (exact-endpoint allowlist, service key only).
   *(built)*
 - **Database** is one Supabase project; RLS on every table; anon gets nothing, a signed-in app user gets
@@ -45,7 +45,7 @@ Evaluated and rejected: HackerEarth (403s, no hackathons listed), Reskilll (robo
 Lablab.ai (needs a headless browser past Cloudflare), GeeksforGeeks (robots disallows /),
 re-listing sites (Hackathon.com, AllHackathons). Details: docs/data-plan.md.
 
-## Collector run (every 6 h at :23 UTC)
+## Collector run (every 3 h at :47 UTC; ETHGlobal and dev.events every 6 h)
 
 1. Each enabled adapter fetches, parses and filters (open and India/online). A failure is isolated.
 2. **Quality gate** (next): "is this a hackathon?" check, date sanity (start ≤ end, deadline ≤ end,
@@ -54,11 +54,13 @@ re-listing sites (Hackathon.com, AllHackathons). Details: docs/data-plan.md.
    75–89 review) → merge with **per-field source precedence** → trust label + warnings → fingerprint;
    tracked-field changes go to event_changes. Events linked to a failed source are left untouched. *(built;
    precedence next)*
-4. End of run: close passed deadlines; count missing runs for sources that ran; stale after 3. *(built)*
+4. End of run: close passed deadlines; count missing runs for sources that ran; stale when unseen 12 h and
+   missed 3 runs, or unseen 3 days; a run never stales more than 30% of open events (0022). *(built)*
 5. Geocode new venues (cache → Nominatim → city centre, approximate flagged). *(built)*
 6. Publish approved submissions (next).
-7. Alerts: push to devices with tokens (next); Telegram only for the admin's own marked row. *(built)*
-8. Health: per-source alert after 2 days of zero or errors; whole-run failure alert from the workflow. *(built)*
+7. Alerts: push to devices with tokens (next); none on Telegram, which is admin-only. *(built)*
+8. Health: per-source alert after 2 days of zero or errors, repeated at most every 6 h; whole-run failure
+   alert from the workflow; daily report from the 09:17 IST run. *(built)*
 9. Weekly (Monday): data-quality report per source and field; retention cleanup; database backup.
 
 ## Data model
@@ -112,9 +114,10 @@ Next, in order:
 |---|---|---|---|
 | Supabase DB | 500 MB | < 50 MB for a year of events | fine |
 | Supabase egress | 5 GB/month | first sync ~0.5 MB per install, then small deltas | select needed columns; Pro past ~5k weekly users |
+| Supabase egress, collector | same 5 GB | not measured yet. Each run reads all of events, event_sources and geocode_cache, and every source page comes back through fetch_url: roughly 3–7 GB a month hourly (estimate, 25 Nov 2026), so runs are every 3 h (about 1–2.5 GB) | a week after P0: Usage → Egress, last 7 days × 4 (docs/setup-actions-secrets.md). Under 1.2 GB: hourly cron `47 * * * *`. Result: _to fill in_ |
 | Supabase auth | 50k MAU | guests count as users | Pro when close |
-| Supabase pause | after 7 days idle | collector writes every 6 h | fine |
-| GitHub Actions | private repo minutes | ~1 min × 4 runs a day | fine |
+| Supabase pause | after 7 days idle | collector writes every 3 h | fine |
+| GitHub Actions | free minutes on a public repo | 24 runs a day | fine |
 | Expo push, EAS builds | free tier | a few builds a month | fine |
 | Google Play | $25 one time | personal account: 12 testers × 14 days closed test first | plan the test with college friends |
 

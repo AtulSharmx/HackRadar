@@ -12,7 +12,7 @@ from .models import Event
 
 def sync(db: Db, events: list[Event], down: set[str] = frozenset()) -> tuple[dict[str, int], int, list[str]]:
     """Returns (new-event counts per source, number of tracked changes recorded, new event ids).
-    down: sources that failed this run. Events linked to them are left as stored, because merging
+    down: sources that failed or were skipped this run. Events linked to them are left as stored, because merging
     only the surviving source's values would record fake changes (and flip back next run)."""
     stored = {r["id"]: r for r in db.select_all("events", select="*")}
     links = db.select_all("event_sources", select="source,source_event_id,event_id")
